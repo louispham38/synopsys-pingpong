@@ -261,24 +261,88 @@
                     <h2><i class="fas fa-book-open"></i> Hướng Dẫn & Kèo Chấp</h2>
                 </div>
                 <div class="guide-layout">
-                    <div class="guide-card">
+                    <div class="guide-card guide-card-full">
                         <div class="guide-card-header"><i class="fas fa-calculator"></i><h3>Cách Tính Điểm (ELO Rating)</h3></div>
                         <div class="guide-card-body">
-                            <p>Hệ thống sử dụng <strong>thuật toán ELO</strong> (tương tự cờ vua) để tính điểm xếp hạng.</p>
-                            <div class="guide-formula">
-                                <div class="formula-title">Công thức tính:</div>
-                                <code>Điểm mới = Điểm cũ + K × (Kết quả - Kỳ vọng)</code>
+                            <p>Hệ thống sử dụng <strong>thuật toán ELO</strong> (giống hệ thống xếp hạng cờ vua quốc tế) để tính điểm. Ý tưởng: thắng người mạnh hơn → được nhiều điểm, thắng người yếu hơn → được ít điểm.</p>
+
+                            <div class="elo-steps">
+                                <div class="elo-step">
+                                    <div class="elo-step-number">1</div>
+                                    <div class="elo-step-content">
+                                        <div class="elo-step-title">Tính Kỳ Vọng (Expected Score)</div>
+                                        <p>Xác suất thắng dựa trên chênh lệch điểm:</p>
+                                        <div class="guide-formula">
+                                            <code>E<sub>A</sub> = 1 ÷ (1 + 10<sup>(R<sub>B</sub> − R<sub>A</sub>) / 400</sup>)</code>
+                                        </div>
+                                        <p class="formula-explain">Trong đó: <strong>R<sub>A</sub></strong> = điểm người A, <strong>R<sub>B</sub></strong> = điểm người B, <strong>E<sub>A</sub></strong> = kỳ vọng thắng của A (từ 0 đến 1).</p>
+                                        <p class="formula-explain">Nếu A mạnh hơn B nhiều → E<sub>A</sub> gần 1 (gần chắc thắng). Nếu ngang nhau → E<sub>A</sub> ≈ 0.5.</p>
+                                    </div>
+                                </div>
+                                <div class="elo-step">
+                                    <div class="elo-step-number">2</div>
+                                    <div class="elo-step-content">
+                                        <div class="elo-step-title">Cập Nhật Điểm</div>
+                                        <div class="guide-formula">
+                                            <code>Điểm mới = Điểm cũ + K × (Kết quả − Kỳ vọng)</code>
+                                        </div>
+                                        <ul class="guide-list">
+                                            <li><strong>K = 32</strong> — Hệ số biến động (K càng lớn → điểm thay đổi càng nhiều)</li>
+                                            <li><strong>Kết quả:</strong> Thắng = 1, Thua = 0</li>
+                                            <li><strong>Kỳ vọng:</strong> Giá trị E<sub>A</sub> vừa tính ở bước 1</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                            <ul class="guide-list">
-                                <li><strong>K = 32</strong> — Hệ số biến động điểm mỗi trận</li>
-                                <li><strong>Kết quả:</strong> Thắng = 1, Thua = 0</li>
-                                <li><strong>Kỳ vọng:</strong> Tính dựa trên chênh lệch điểm 2 người</li>
-                            </ul>
-                            <div class="guide-examples">
-                                <div class="guide-example-title"><i class="fas fa-lightbulb"></i> Ví dụ cụ thể:</div>
-                                <div class="example-scenario"><span class="scenario-label">800 thắng 600:</span><span class="scenario-result positive">+8 pts</span><span class="scenario-note">(thắng yếu → ít điểm)</span></div>
-                                <div class="example-scenario"><span class="scenario-label">600 thắng 800:</span><span class="scenario-result positive">+24 pts</span><span class="scenario-note">(thắng mạnh → nhiều điểm)</span></div>
-                                <div class="example-scenario"><span class="scenario-label">Ngang điểm:</span><span class="scenario-result">±16 pts</span><span class="scenario-note">(ngang tài → chia đều)</span></div>
+
+                            <div class="elo-example-box">
+                                <div class="guide-example-title"><i class="fas fa-lightbulb"></i> Ví dụ chi tiết: A (800 điểm) đấu B (600 điểm)</div>
+                                <div class="elo-example-detail">
+                                    <div class="elo-ex-section">
+                                        <div class="elo-ex-label">Bước 1 — Tính kỳ vọng:</div>
+                                        <div class="elo-ex-calc">
+                                            E<sub>A</sub> = 1 ÷ (1 + 10<sup>(600−800)/400</sup>) = 1 ÷ (1 + 10<sup>−0.5</sup>) = 1 ÷ (1 + 0.316) = <strong>0.76</strong>
+                                        </div>
+                                        <div class="elo-ex-calc">
+                                            E<sub>B</sub> = 1 − 0.76 = <strong>0.24</strong>
+                                        </div>
+                                        <p class="elo-ex-meaning">→ Hệ thống kỳ vọng A thắng 76%, B thắng 24%.</p>
+                                    </div>
+                                    <div class="elo-ex-section">
+                                        <div class="elo-ex-label">Bước 2a — Nếu A thắng (đúng kỳ vọng):</div>
+                                        <div class="elo-ex-calc">
+                                            A: 800 + 32 × (1 − 0.76) = 800 + 32 × 0.24 = <strong class="positive">808</strong> <span class="elo-delta positive">(+8)</span>
+                                        </div>
+                                        <div class="elo-ex-calc">
+                                            B: 600 + 32 × (0 − 0.24) = 600 + 32 × (−0.24) = <strong class="negative">592</strong> <span class="elo-delta negative">(−8)</span>
+                                        </div>
+                                        <p class="elo-ex-meaning">→ A thắng B yếu hơn → chỉ được <strong>+8 điểm</strong> (ít, vì đúng dự đoán).</p>
+                                    </div>
+                                    <div class="elo-ex-section">
+                                        <div class="elo-ex-label">Bước 2b — Nếu B thắng (bất ngờ!):</div>
+                                        <div class="elo-ex-calc">
+                                            B: 600 + 32 × (1 − 0.24) = 600 + 32 × 0.76 = <strong class="positive">624</strong> <span class="elo-delta positive">(+24)</span>
+                                        </div>
+                                        <div class="elo-ex-calc">
+                                            A: 800 + 32 × (0 − 0.76) = 800 + 32 × (−0.76) = <strong class="negative">776</strong> <span class="elo-delta negative">(−24)</span>
+                                        </div>
+                                        <p class="elo-ex-meaning">→ B thắng A mạnh hơn → được <strong>+24 điểm</strong> (nhiều, vì bất ngờ!).</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="elo-summary-table">
+                                <div class="guide-example-title"><i class="fas fa-table"></i> Tóm tắt nhanh</div>
+                                <table class="elo-quick-table">
+                                    <thead><tr><th>Tình huống</th><th>Kết quả</th><th>Ý nghĩa</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>800 thắng 600</td><td class="positive">+8 / −8</td><td>Mạnh thắng yếu → ít điểm (ai cũng đoán được)</td></tr>
+                                        <tr><td>600 thắng 800</td><td class="positive">+24 / −24</td><td>Yếu thắng mạnh → nhiều điểm (bất ngờ!)</td></tr>
+                                        <tr><td>700 thắng 700</td><td>+16 / −16</td><td>Ngang tài → chia đều (50-50)</td></tr>
+                                        <tr><td>900 thắng 500</td><td class="positive">+3 / −3</td><td>Chênh lệch quá lớn → gần như không đổi</td></tr>
+                                        <tr><td>500 thắng 900</td><td class="positive">+29 / −29</td><td>Đại địa chấn → điểm thay đổi rất nhiều</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

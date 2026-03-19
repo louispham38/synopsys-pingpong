@@ -1180,6 +1180,188 @@ body {
     font-style: italic;
 }
 
+/* ELO Steps */
+.elo-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.elo-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.elo-step-number {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    background: var(--gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+    margin-top: 2px;
+}
+
+.elo-step-content {
+    flex: 1;
+}
+
+.elo-step-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.elo-step-content .guide-formula {
+    margin-bottom: 12px;
+}
+
+.formula-explain {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    line-height: 1.6;
+}
+
+/* ELO Example Box */
+.elo-example-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.elo-example-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.elo-ex-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+}
+
+.elo-ex-label {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.elo-ex-calc {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--text-primary);
+    padding: 6px 0;
+    line-height: 1.8;
+}
+
+.elo-ex-calc strong.positive {
+    color: var(--success);
+}
+
+.elo-ex-calc strong.negative {
+    color: var(--error);
+}
+
+.elo-delta {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+}
+
+.elo-delta.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.elo-delta.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+}
+
+.elo-ex-meaning {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* ELO Summary Table */
+.elo-summary-table {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+}
+
+.elo-quick-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.elo-quick-table thead th {
+    background: var(--bg-card);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
+}
+
+.elo-quick-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.elo-quick-table tbody td.positive {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.elo-quick-table tbody tr:hover {
+    background: rgba(108, 60, 224, 0.05);
+}
+
+@media (max-width: 600px) {
+    .elo-step {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .elo-ex-calc {
+        font-size: 12px;
+        overflow-x: auto;
+    }
+
+    .elo-quick-table {
+        font-size: 12px;
+    }
+
+    .elo-quick-table thead th,
+    .elo-quick-table tbody td {
+        padding: 8px 10px;
+    }
+}
+
 /* Form Ratings in Guide */
 .form-rating-list {
     display: flex;
