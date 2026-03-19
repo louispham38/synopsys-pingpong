@@ -373,6 +373,7 @@
                     <h2><i class="fas fa-gear"></i> Quản Lý (Admin)</h2>
                 </div>
                 <div class="admin-layout">
+                    <!-- Adjust Rating -->
                     <div class="admin-card">
                         <h3><i class="fas fa-sliders"></i> Điều Chỉnh Điểm Tay Vợt</h3>
                         <div class="admin-adjust">
@@ -384,11 +385,47 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Add Player -->
                     <div class="admin-card">
+                        <h3><i class="fas fa-user-plus"></i> Thêm Tay Vợt Mới</h3>
+                        <div class="admin-add-player">
+                            <div class="form-group"><label>Tên tay vợt</label><input type="text" id="addPlayerName" placeholder="VD: Nguyen Van A"></div>
+                            <div class="form-row-2">
+                                <div class="form-group"><label>Nhóm</label>
+                                    <select id="addPlayerGroup" class="filter-select">
+                                        <option value="Field">Field</option><option value="PV">PV</option><option value="PD">PD</option>
+                                        <option value="SSG">SSG</option><option value="AE">AE</option><option value="IPG">IPG</option>
+                                        <option value="CSG">CSG</option><option value="TPG">TPG</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Điểm khởi tạo</label><input type="number" id="addPlayerRating" value="500" min="100" max="2000"></div>
+                            </div>
+                            <div class="form-group"><label>Email</label><input type="email" id="addPlayerEmail" placeholder="email@synopsys.com"></div>
+                            <button class="btn-adjust" id="btnAddPlayer"><i class="fas fa-plus"></i> Thêm Tay Vợt</button>
+                        </div>
+                    </div>
+                    <!-- Remove Player -->
+                    <div class="admin-card">
+                        <h3><i class="fas fa-user-minus"></i> Xóa Tay Vợt</h3>
+                        <div class="admin-remove">
+                            <select id="removePlayer" class="player-select"><option value="">-- Chọn tay vợt cần xóa --</option></select>
+                            <button class="btn-danger" id="btnRemovePlayer"><i class="fas fa-trash"></i> Xóa Tay Vợt</button>
+                            <p class="admin-note">Xóa tay vợt sẽ không xóa lịch sử thi đấu cũ của người đó.</p>
+                        </div>
+                    </div>
+                    <!-- Match History Management -->
+                    <div class="admin-card">
+                        <h3><i class="fas fa-clock-rotate-left"></i> Quản Lý Lịch Sử Thi Đấu</h3>
+                        <div class="admin-history-mgmt">
+                            <div class="admin-history-list" id="adminHistoryList"></div>
+                        </div>
+                    </div>
+                    <!-- Reset All -->
+                    <div class="admin-card admin-card-full">
                         <h3><i class="fas fa-database"></i> Quản Lý Dữ Liệu</h3>
                         <div class="admin-actions">
                             <button class="btn-danger" id="btnResetAll"><i class="fas fa-trash"></i> Reset toàn bộ dữ liệu</button>
-                            <p class="admin-note">Thao tác này sẽ xóa tất cả lịch sử thi đấu và đặt lại điểm về ban đầu.</p>
+                            <p class="admin-note">Thao tác này sẽ xóa tất cả lịch sử thi đấu và đặt lại điểm về ban đầu. Không thể hoàn tác!</p>
                         </div>
                     </div>
                 </div>

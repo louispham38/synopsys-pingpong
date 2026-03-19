@@ -2243,6 +2243,134 @@ body {
     line-height: 1.5;
 }
 
+.admin-card-full {
+    grid-column: 1 / -1;
+}
+
+/* Add Player Form */
+.admin-add-player .form-group {
+    margin-bottom: 12px;
+}
+
+.admin-add-player .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.admin-add-player .form-group input,
+.admin-add-player .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.admin-add-player .form-group input:focus,
+.admin-add-player .form-group select:focus {
+    outline: none;
+    border-color: var(--primary-light);
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Remove Player */
+.admin-remove {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Admin History Management */
+.admin-history-mgmt {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.admin-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+.admin-history-item:hover {
+    border-color: var(--border-light);
+}
+
+.ahi-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.ahi-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ahi-match {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ahi-match strong {
+    color: var(--accent);
+    margin: 0 4px;
+}
+
+.ahi-score {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.btn-delete-match {
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 50%;
+    color: var(--danger);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.btn-delete-match:hover {
+    background: rgba(239, 68, 68, 0.25);
+    transform: scale(1.1);
+}
+
 /* History Fun Tags */
 .history-fun {
     display: flex;

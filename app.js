@@ -159,6 +159,32 @@ class AppState {
         if (p) { p.rating = Math.max(100, Math.min(2000, newRating)); this.savePlayers(); }
     }
 
+    addPlayer(name, group, email, rating) {
+        const maxId = this.players.reduce((max, p) => Math.max(max, p.id), 0);
+        const player = {
+            id: maxId + 1, name, group, email,
+            rating: Math.max(100, Math.min(2000, rating)),
+            wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null,
+            initialRating: rating,
+        };
+        this.players.push(player);
+        this.savePlayers();
+        return player;
+    }
+
+    removePlayer(playerId) {
+        this.players = this.players.filter(p => p.id !== playerId);
+        this.savePlayers();
+    }
+
+    deleteMatch(matchId) {
+        const idx = this.matches.findIndex(m => m.id === matchId);
+        if (idx === -1) return false;
+        this.matches.splice(idx, 1);
+        this.saveMatches();
+        return true;
+    }
+
     recordMatch(playerAId, playerBId, sets, date, funHandicaps) {
         const playerA = this.getPlayer(playerAId);
         const playerB = this.getPlayer(playerBId);
@@ -412,7 +438,36 @@ class UI {
             this.state.adjustRating(id, newRating);
             this.populateSelects();
             this.render();
+            this.renderAdminHistory();
             this.showToast('Đã cập nhật điểm!', 'success');
+        });
+
+        document.getElementById('btnAddPlayer').addEventListener('click', () => {
+            const name = document.getElementById('addPlayerName').value.trim();
+            const group = document.getElementById('addPlayerGroup').value;
+            const email = document.getElementById('addPlayerEmail').value.trim();
+            const rating = parseInt(document.getElementById('addPlayerRating').value) || 500;
+            if (!name) { this.showToast('Nhập tên tay vợt!', 'error'); return; }
+            this.state.addPlayer(name, group, email, rating);
+            document.getElementById('addPlayerName').value = '';
+            document.getElementById('addPlayerEmail').value = '';
+            document.getElementById('addPlayerRating').value = '500';
+            this.populateSelects();
+            this.render();
+            this.showToast(`Đã thêm ${name}!`, 'success');
+        });
+
+        document.getElementById('btnRemovePlayer').addEventListener('click', () => {
+            const id = parseInt(document.getElementById('removePlayer').value);
+            if (!id) { this.showToast('Chọn tay vợt cần xóa!', 'error'); return; }
+            const p = this.state.getPlayer(id);
+            if (!confirm(`Xóa ${p.name} khỏi danh sách?`)) return;
+            this.state.removePlayer(id);
+            document.getElementById('removePlayer').value = '';
+            this.populateSelects();
+            this.render();
+            this.renderAdminHistory();
+            this.showToast(`Đã xóa ${p.name}`, 'info');
         });
 
         document.getElementById('btnResetAll').addEventListener('click', () => {
@@ -420,8 +475,42 @@ class UI {
                 this.state.resetData();
                 this.populateSelects();
                 this.render();
+                this.renderAdminHistory();
                 this.showToast('Đã reset toàn bộ dữ liệu', 'info');
             }
+        });
+
+        this.renderAdminHistory();
+    }
+
+    renderAdminHistory() {
+        const container = document.getElementById('adminHistoryList');
+        if (!container) return;
+        if (!this.state.matches.length) {
+            container.innerHTML = '<p class="admin-note">Chưa có trận đấu nào.</p>';
+            return;
+        }
+        container.innerHTML = this.state.matches.map(m => {
+            const isAWin = m.winnerId === m.playerAId;
+            const setsStr = m.sets.map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
+            return `<div class="admin-history-item">
+                <div class="ahi-info">
+                    <span class="ahi-date">${this.formatDate(m.date)}</span>
+                    <span class="ahi-match ${isAWin ? '' : 'ahi-reverse'}">${m.playerAName} <strong>${m.setsWonA}-${m.setsWonB}</strong> ${m.playerBName}</span>
+                    <span class="ahi-score">(${setsStr})</span>
+                </div>
+                <button class="btn-delete-match" data-match-id="${m.id}" title="Xóa trận này"><i class="fas fa-times"></i></button>
+            </div>`;
+        }).join('');
+
+        container.querySelectorAll('.btn-delete-match').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm('Xóa trận đấu này? (Điểm sẽ KHÔNG tự động hoàn lại)')) return;
+                this.state.deleteMatch(parseInt(btn.dataset.matchId));
+                this.render();
+                this.renderAdminHistory();
+                this.showToast('Đã xóa trận đấu', 'info');
+            });
         });
     }
 
@@ -546,7 +635,7 @@ class UI {
 
     populateSelects() {
         const sorted = this.state.getSortedPlayers();
-        ['playerA', 'playerB', 'handicapPlayerA', 'handicapPlayerB', 'adjustPlayer'].forEach(selId => {
+        ['playerA', 'playerB', 'handicapPlayerA', 'handicapPlayerB', 'adjustPlayer', 'removePlayer'].forEach(selId => {
             const sel = document.getElementById(selId);
             if (!sel) return;
             const current = sel.value;
