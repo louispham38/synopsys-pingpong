@@ -9,7 +9,56 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-    <div class="app-container">
+    <!-- AUTH MODAL -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-card">
+            <div class="modal-logo">
+                <i class="fas fa-table-tennis-paddle-ball"></i>
+                <h2>Synopsys Ping Pong VN07</h2>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-auth="login">Đăng Nhập</button>
+                <button class="auth-tab" data-auth="register">Đăng Ký</button>
+            </div>
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Tên đăng nhập</label>
+                    <input type="text" id="loginUser" placeholder="Username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Mật khẩu</label>
+                    <input type="password" id="loginPass" placeholder="Password" required autocomplete="current-password">
+                </div>
+                <div class="auth-error" id="loginError"></div>
+                <button type="submit" class="btn-auth">Đăng Nhập</button>
+            </form>
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label><i class="fas fa-user-plus"></i> Tên đăng nhập</label>
+                    <input type="text" id="regUser" placeholder="Username (4+ ký tự)" required minlength="4" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-signature"></i> Tên hiển thị</label>
+                    <input type="text" id="regDisplayName" placeholder="Tên của bạn" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Mật khẩu</label>
+                    <input type="password" id="regPass" placeholder="Password (4+ ký tự)" required minlength="4" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Xác nhận mật khẩu</label>
+                    <input type="password" id="regPassConfirm" placeholder="Nhập lại password" required autocomplete="new-password">
+                </div>
+                <div class="auth-error" id="regError"></div>
+                <button type="submit" class="btn-auth">Đăng Ký</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="app-container" id="appMain" style="display:none;">
         <header class="app-header">
             <div class="header-content">
                 <div class="logo-section">
@@ -19,18 +68,25 @@
                         <p class="subtitle">Bảng Xếp Hạng Nội Bộ 2026</p>
                     </div>
                 </div>
-                <div class="header-stats">
-                    <div class="stat-card">
-                        <span class="stat-number" id="totalPlayers">0</span>
-                        <span class="stat-label">Tay vợt</span>
+                <div class="header-right">
+                    <div class="header-stats">
+                        <div class="stat-card">
+                            <span class="stat-number" id="totalPlayers">0</span>
+                            <span class="stat-label">Tay vợt</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="totalMatches">0</span>
+                            <span class="stat-label">Trận đấu</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="totalGroups">0</span>
+                            <span class="stat-label">Nhóm</span>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="totalMatches">0</span>
-                        <span class="stat-label">Trận đấu</span>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-number" id="totalGroups">0</span>
-                        <span class="stat-label">Nhóm</span>
+                    <div class="user-menu">
+                        <span class="user-badge" id="userBadge"><i class="fas fa-user-circle"></i> <span id="userName"></span></span>
+                        <span class="admin-tag" id="adminTag" style="display:none;">ADMIN</span>
+                        <button class="btn-logout" id="btnLogout"><i class="fas fa-sign-out-alt"></i></button>
                     </div>
                 </div>
             </div>
@@ -40,7 +96,7 @@
             <button class="tab-btn active" data-tab="ranking">
                 <i class="fas fa-trophy"></i> Bảng Xếp Hạng
             </button>
-            <button class="tab-btn" data-tab="match">
+            <button class="tab-btn admin-only" data-tab="match" style="display:none;">
                 <i class="fas fa-table-tennis-paddle-ball"></i> Nhập Kết Quả
             </button>
             <button class="tab-btn" data-tab="history">
@@ -48,6 +104,9 @@
             </button>
             <button class="tab-btn" data-tab="guide">
                 <i class="fas fa-book-open"></i> Hướng Dẫn & Kèo Chấp
+            </button>
+            <button class="tab-btn admin-only" data-tab="admin" style="display:none;">
+                <i class="fas fa-gear"></i> Quản Lý
             </button>
         </nav>
 
@@ -66,7 +125,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="top-players">
                     <div class="top-player gold" id="top1">
                         <div class="crown"><i class="fas fa-crown"></i></div>
@@ -87,7 +145,6 @@
                         <div class="top-rating">---</div>
                     </div>
                 </div>
-
                 <div class="table-container">
                     <table class="ranking-table" id="rankingTable">
                         <thead>
@@ -102,42 +159,48 @@
                                 <th class="col-streak">Chuỗi</th>
                             </tr>
                         </thead>
-                        <tbody id="rankingBody">
-                        </tbody>
+                        <tbody id="rankingBody"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- MATCH INPUT TAB -->
+            <!-- MATCH INPUT TAB (Admin only) -->
             <section id="tab-match" class="tab-content">
                 <div class="section-header">
                     <h2><i class="fas fa-table-tennis-paddle-ball"></i> Nhập Kết Quả Thi Đấu</h2>
                 </div>
-
                 <div class="match-form-container">
                     <div class="match-form">
                         <div class="match-players">
                             <div class="player-side player-a">
                                 <label>Tay Vợt A</label>
-                                <select id="playerA" class="player-select">
-                                    <option value="">-- Chọn tay vợt --</option>
-                                </select>
+                                <select id="playerA" class="player-select"><option value="">-- Chọn tay vợt --</option></select>
                                 <div class="player-preview" id="previewA"></div>
                             </div>
-
-                            <div class="vs-badge">
-                                <span>VS</span>
-                            </div>
-
+                            <div class="vs-badge"><span>VS</span></div>
                             <div class="player-side player-b">
                                 <label>Tay Vợt B</label>
-                                <select id="playerB" class="player-select">
-                                    <option value="">-- Chọn tay vợt --</option>
-                                </select>
+                                <select id="playerB" class="player-select"><option value="">-- Chọn tay vợt --</option></select>
                                 <div class="player-preview" id="previewB"></div>
                             </div>
                         </div>
-
+                        <!-- Handicap announcement -->
+                        <div class="match-handicap-banner" id="matchHandicapBanner" style="display:none;"></div>
+                        <!-- Fun handicap selection -->
+                        <div class="fun-handicap-select" id="funHandicapSelect" style="display:none;">
+                            <h3><i class="fas fa-face-laugh-squint"></i> Chọn Kèo Vui (tuỳ chọn)</h3>
+                            <div class="fun-check-list">
+                                <label class="fun-check"><input type="checkbox" value="tay-trai"> 🤚 Tay Trái</label>
+                                <label class="fun-check"><input type="checkbox" value="vot-ngan"> 🏓 Vợt Ngắn</label>
+                                <label class="fun-check"><input type="checkbox" value="nua-ban"> 🎯 Nửa Bàn</label>
+                                <label class="fun-check"><input type="checkbox" value="doi-vot"> 🔄 Đổi Vợt</label>
+                                <label class="fun-check"><input type="checkbox" value="1-vs-2"> 👥 1 vs 2</label>
+                                <label class="fun-check"><input type="checkbox" value="1-mat"> 🏓 Chỉ 1 Mặt (FH/BH)</label>
+                                <label class="fun-check"><input type="checkbox" value="khong-xoay"> 🚫 Không Xoáy Ngang</label>
+                                <label class="fun-check"><input type="checkbox" value="friday-night"> 🍺 Friday Night</label>
+                                <label class="fun-check"><input type="checkbox" value="plank"> 💪 Plank</label>
+                            </div>
+                        </div>
                         <div class="score-input-section">
                             <h3>Nhập Tỉ Số (Các Set)</h3>
                             <div id="setsContainer" class="sets-container">
@@ -161,17 +224,14 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="match-date-section">
                             <label for="matchDate">Ngày thi đấu</label>
                             <input type="date" id="matchDate" class="date-input">
                         </div>
-
                         <div class="match-summary" id="matchSummary" style="display:none;">
                             <h3>Kết Quả Dự Kiến</h3>
                             <div class="summary-content" id="summaryContent"></div>
                         </div>
-
                         <button class="btn-submit" id="submitMatch" disabled>
                             <i class="fas fa-check-circle"></i> Lưu Kết Quả
                         </button>
@@ -183,7 +243,7 @@
             <section id="tab-history" class="tab-content">
                 <div class="section-header">
                     <h2><i class="fas fa-clock-rotate-left"></i> Lịch Sử Thi Đấu</h2>
-                    <button class="btn-clear-history" id="clearHistory">
+                    <button class="btn-clear-history admin-only" id="clearHistory" style="display:none;">
                         <i class="fas fa-trash"></i> Xóa lịch sử
                     </button>
                 </div>
@@ -194,21 +254,17 @@
                     </div>
                 </div>
             </section>
+
             <!-- GUIDE TAB -->
             <section id="tab-guide" class="tab-content">
                 <div class="section-header">
                     <h2><i class="fas fa-book-open"></i> Hướng Dẫn & Kèo Chấp</h2>
                 </div>
-
                 <div class="guide-layout">
-                    <!-- Scoring Guide -->
                     <div class="guide-card">
-                        <div class="guide-card-header">
-                            <i class="fas fa-calculator"></i>
-                            <h3>Cách Tính Điểm (ELO Rating)</h3>
-                        </div>
+                        <div class="guide-card-header"><i class="fas fa-calculator"></i><h3>Cách Tính Điểm (ELO Rating)</h3></div>
                         <div class="guide-card-body">
-                            <p>Hệ thống sử dụng <strong>thuật toán ELO</strong> (tương tự cờ vua) để tính điểm xếp hạng. Mỗi tay vợt bắt đầu với số điểm khởi tạo ban đầu.</p>
+                            <p>Hệ thống sử dụng <strong>thuật toán ELO</strong> (tương tự cờ vua) để tính điểm xếp hạng.</p>
                             <div class="guide-formula">
                                 <div class="formula-title">Công thức tính:</div>
                                 <code>Điểm mới = Điểm cũ + K × (Kết quả - Kỳ vọng)</code>
@@ -220,226 +276,119 @@
                             </ul>
                             <div class="guide-examples">
                                 <div class="guide-example-title"><i class="fas fa-lightbulb"></i> Ví dụ cụ thể:</div>
-                                <div class="example-scenario">
-                                    <span class="scenario-label">Người 800 điểm thắng 600 điểm:</span>
-                                    <span class="scenario-result positive">+8 điểm</span>
-                                    <span class="scenario-note">(thắng đối thủ yếu → ít điểm)</span>
-                                </div>
-                                <div class="example-scenario">
-                                    <span class="scenario-label">Người 600 điểm thắng 800 điểm:</span>
-                                    <span class="scenario-result positive">+24 điểm</span>
-                                    <span class="scenario-note">(thắng đối thủ mạnh → nhiều điểm)</span>
-                                </div>
-                                <div class="example-scenario">
-                                    <span class="scenario-label">Hai người cùng điểm, 1 thắng 1 thua:</span>
-                                    <span class="scenario-result">±16 điểm</span>
-                                    <span class="scenario-note">(ngang tài → chia đều)</span>
-                                </div>
+                                <div class="example-scenario"><span class="scenario-label">800 thắng 600:</span><span class="scenario-result positive">+8 pts</span><span class="scenario-note">(thắng yếu → ít điểm)</span></div>
+                                <div class="example-scenario"><span class="scenario-label">600 thắng 800:</span><span class="scenario-result positive">+24 pts</span><span class="scenario-note">(thắng mạnh → nhiều điểm)</span></div>
+                                <div class="example-scenario"><span class="scenario-label">Ngang điểm:</span><span class="scenario-result">±16 pts</span><span class="scenario-note">(ngang tài → chia đều)</span></div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Form Evaluation -->
                     <div class="guide-card">
-                        <div class="guide-card-header">
-                            <i class="fas fa-fire"></i>
-                            <h3>Đánh Giá Phong Độ</h3>
-                        </div>
+                        <div class="guide-card-header"><i class="fas fa-fire"></i><h3>Đánh Giá Phong Độ</h3></div>
                         <div class="guide-card-body">
-                            <p>Phong độ được đánh giá dựa trên <strong>5 trận gần nhất</strong>:</p>
+                            <p>Dựa trên <strong>5 trận gần nhất</strong>:</p>
                             <div class="form-rating-list">
-                                <div class="form-rating-item">
-                                    <span class="form-rating-badge excellent">🔥 Xuất sắc</span>
-                                    <span class="form-rating-desc">Thắng 4-5 / 5 trận gần nhất</span>
-                                </div>
-                                <div class="form-rating-item">
-                                    <span class="form-rating-badge good">📈 Tốt</span>
-                                    <span class="form-rating-desc">Thắng 3 / 5 trận gần nhất</span>
-                                </div>
-                                <div class="form-rating-item">
-                                    <span class="form-rating-badge ok">➡️ Ổn định</span>
-                                    <span class="form-rating-desc">Thắng 2 / 5 trận gần nhất</span>
-                                </div>
-                                <div class="form-rating-item">
-                                    <span class="form-rating-badge bad">📉 Kém</span>
-                                    <span class="form-rating-desc">Thắng 1 / 5 trận gần nhất</span>
-                                </div>
-                                <div class="form-rating-item">
-                                    <span class="form-rating-badge terrible">❄️ Rất kém</span>
-                                    <span class="form-rating-desc">Thua tất cả 5 trận gần nhất</span>
-                                </div>
+                                <div class="form-rating-item"><span class="form-rating-badge excellent">🔥 Xuất sắc</span><span class="form-rating-desc">Thắng 4-5 / 5 trận</span></div>
+                                <div class="form-rating-item"><span class="form-rating-badge good">📈 Tốt</span><span class="form-rating-desc">Thắng 3 / 5 trận</span></div>
+                                <div class="form-rating-item"><span class="form-rating-badge ok">➡️ Ổn định</span><span class="form-rating-desc">Thắng 2 / 5 trận</span></div>
+                                <div class="form-rating-item"><span class="form-rating-badge bad">📉 Kém</span><span class="form-rating-desc">Thắng 1 / 5 trận</span></div>
+                                <div class="form-rating-item"><span class="form-rating-badge terrible">❄️ Rất kém</span><span class="form-rating-desc">Thua cả 5 trận</span></div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Handicap Table -->
                     <div class="guide-card guide-card-full">
-                        <div class="guide-card-header">
-                            <i class="fas fa-scale-balanced"></i>
-                            <h3>Bảng Kèo Chấp Điểm</h3>
-                        </div>
+                        <div class="guide-card-header"><i class="fas fa-scale-balanced"></i><h3>Bảng Kèo Chấp Điểm</h3></div>
                         <div class="guide-card-body">
-                            <p>Để trận đấu công bằng hơn, người có điểm cao hơn sẽ <strong>chấp điểm</strong> cho người thấp hơn mỗi set. Số điểm chấp tính theo chênh lệch rating:</p>
-
+                            <p>Người điểm cao chấp điểm cho người thấp hơn mỗi set:</p>
                             <div class="handicap-table-container">
                                 <table class="handicap-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Chênh lệch điểm</th>
-                                            <th>Chấp mỗi set</th>
-                                            <th>Mô tả</th>
-                                            <th>Ví dụ</th>
-                                        </tr>
-                                    </thead>
+                                    <thead><tr><th>Chênh lệch</th><th>Chấp mỗi set</th><th>Mô tả</th><th>Ví dụ</th></tr></thead>
                                     <tbody>
-                                        <tr>
-                                            <td><span class="diff-badge diff-0">0 - 50</span></td>
-                                            <td><span class="handicap-value">0-0-0</span></td>
-                                            <td>Ngang tài ngang sức</td>
-                                            <td class="example-col">800 vs 780 → Không chấp</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-1">51 - 100</span></td>
-                                            <td><span class="handicap-value">1-1-1</span></td>
-                                            <td>Chênh nhẹ</td>
-                                            <td class="example-col">800 vs 720 → Chấp 1 điểm/set</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-2">101 - 150</span></td>
-                                            <td><span class="handicap-value">2-2-2</span></td>
-                                            <td>Chênh vừa</td>
-                                            <td class="example-col">800 vs 660 → Bắt đầu 2-0</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-3">151 - 200</span></td>
-                                            <td><span class="handicap-value">2-3-2</span></td>
-                                            <td>Chênh khá nhiều</td>
-                                            <td class="example-col">800 vs 620 → Chấp linh hoạt</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-4">201 - 250</span></td>
-                                            <td><span class="handicap-value">3-3-3</span></td>
-                                            <td>Chênh nhiều</td>
-                                            <td class="example-col">800 vs 570 → Chấp 3 điểm/set</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-5">251 - 300</span></td>
-                                            <td><span class="handicap-value">3-4-3</span></td>
-                                            <td>Chênh rất nhiều</td>
-                                            <td class="example-col">800 vs 520 → Chấp nặng</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-6">301 - 400</span></td>
-                                            <td><span class="handicap-value">4-5-4</span></td>
-                                            <td>Chênh cực lớn</td>
-                                            <td class="example-col">990 vs 600 → Gần nửa set</td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="diff-badge diff-7">400+</span></td>
-                                            <td><span class="handicap-value">5-6-5</span></td>
-                                            <td>Sư phụ vs Đệ tử</td>
-                                            <td class="example-col">990 vs 400 → Nửa set rồi!</td>
-                                        </tr>
+                                        <tr><td><span class="diff-badge diff-0">0 - 50</span></td><td><span class="handicap-value">0-0-0</span></td><td>Ngang tài</td><td class="example-col">800 vs 780</td></tr>
+                                        <tr><td><span class="diff-badge diff-1">51 - 100</span></td><td><span class="handicap-value">1-1-1</span></td><td>Chênh nhẹ</td><td class="example-col">800 vs 720</td></tr>
+                                        <tr><td><span class="diff-badge diff-2">101 - 150</span></td><td><span class="handicap-value">2-2-2</span></td><td>Chênh vừa</td><td class="example-col">800 vs 660</td></tr>
+                                        <tr><td><span class="diff-badge diff-3">151 - 200</span></td><td><span class="handicap-value">2-3-2</span></td><td>Chênh khá nhiều</td><td class="example-col">800 vs 620</td></tr>
+                                        <tr><td><span class="diff-badge diff-4">201 - 250</span></td><td><span class="handicap-value">3-3-3</span></td><td>Chênh nhiều</td><td class="example-col">800 vs 570</td></tr>
+                                        <tr><td><span class="diff-badge diff-5">251 - 300</span></td><td><span class="handicap-value">3-4-3</span></td><td>Chênh rất nhiều</td><td class="example-col">800 vs 520</td></tr>
+                                        <tr><td><span class="diff-badge diff-6">301 - 400</span></td><td><span class="handicap-value">4-5-4</span></td><td>Chênh cực lớn</td><td class="example-col">990 vs 600</td></tr>
+                                        <tr><td><span class="diff-badge diff-7">400+</span></td><td><span class="handicap-value">5-6-5</span></td><td>Sư phụ vs Đệ tử</td><td class="example-col">990 vs 400</td></tr>
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div class="handicap-note">
-                                <i class="fas fa-info-circle"></i>
-                                <span><strong>Cách đọc:</strong> "2-3-2" nghĩa là Set 1 chấp 2, Set 2 chấp 3, Set 3 chấp 2. Tỉ số bắt đầu set ví dụ: 0-2, 0-3, 0-2 (người yếu hơn được điểm trước).</span>
-                            </div>
+                            <div class="handicap-note"><i class="fas fa-info-circle"></i><span><strong>Cách đọc:</strong> "2-3-2" = Set 1 chấp 2, Set 2 chấp 3, Set 3 chấp 2.</span></div>
                         </div>
                     </div>
-
-                    <!-- Handicap Calculator -->
                     <div class="guide-card guide-card-full">
-                        <div class="guide-card-header">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                            <h3>Tính Kèo Chấp Nhanh</h3>
-                        </div>
+                        <div class="guide-card-header"><i class="fas fa-wand-magic-sparkles"></i><h3>Tính Kèo Chấp Nhanh</h3></div>
                         <div class="guide-card-body">
-                            <p>Chọn 2 tay vợt để xem kèo chấp gợi ý:</p>
+                            <p>Chọn 2 tay vợt để xem kèo chấp gợi ý + chọn kèo vui:</p>
                             <div class="handicap-calc">
                                 <div class="handicap-calc-inputs">
-                                    <select id="handicapPlayerA" class="player-select">
-                                        <option value="">-- Chọn tay vợt 1 --</option>
-                                    </select>
+                                    <select id="handicapPlayerA" class="player-select"><option value="">-- Chọn tay vợt 1 --</option></select>
                                     <div class="vs-badge-sm"><span>VS</span></div>
-                                    <select id="handicapPlayerB" class="player-select">
-                                        <option value="">-- Chọn tay vợt 2 --</option>
-                                    </select>
+                                    <select id="handicapPlayerB" class="player-select"><option value="">-- Chọn tay vợt 2 --</option></select>
                                 </div>
                                 <div id="handicapResult" class="handicap-result" style="display:none;"></div>
+                                <!-- Fun handicap checkboxes for guide calc -->
+                                <div id="guideFunSelect" class="fun-handicap-select" style="display:none;">
+                                    <h3><i class="fas fa-face-laugh-squint"></i> Thêm Kèo Vui Cho Trận Này</h3>
+                                    <div class="fun-check-list" id="guideFunCheckList">
+                                        <label class="fun-check"><input type="checkbox" value="tay-trai"> 🤚 Tay Trái</label>
+                                        <label class="fun-check"><input type="checkbox" value="vot-ngan"> 🏓 Vợt Ngắn</label>
+                                        <label class="fun-check"><input type="checkbox" value="nua-ban"> 🎯 Nửa Bàn</label>
+                                        <label class="fun-check"><input type="checkbox" value="doi-vot"> 🔄 Đổi Vợt</label>
+                                        <label class="fun-check"><input type="checkbox" value="1-vs-2"> 👥 1 vs 2</label>
+                                        <label class="fun-check"><input type="checkbox" value="1-mat"> 🏓 Chỉ 1 Mặt (FH/BH)</label>
+                                        <label class="fun-check"><input type="checkbox" value="khong-xoay"> 🚫 Không Xoáy Ngang</label>
+                                        <label class="fun-check"><input type="checkbox" value="friday-night"> 🍺 Friday Night</label>
+                                        <label class="fun-check"><input type="checkbox" value="plank"> 💪 Plank</label>
+                                    </div>
+                                    <button class="btn-announce" id="btnAnnounce"><i class="fas fa-bullhorn"></i> Thông Báo Trận Đấu</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Fun Handicaps -->
                     <div class="guide-card guide-card-full">
-                        <div class="guide-card-header">
-                            <i class="fas fa-face-laugh-squint"></i>
-                            <h3>Kèo Chấp Vui Vẻ 🎉</h3>
-                        </div>
+                        <div class="guide-card-header"><i class="fas fa-face-laugh-squint"></i><h3>Kèo Chấp Vui Vẻ 🎉</h3></div>
                         <div class="guide-card-body">
-                            <p>Ngoài kèo chấp điểm thông thường, anh em có thể thử các kèo vui sau:</p>
+                            <p>Ngoài kèo chấp điểm, anh em có thể thử các kèo vui sau:</p>
                             <div class="fun-handicaps">
-                                <div class="fun-item">
-                                    <div class="fun-icon">🤚</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Tay Trái</div>
-                                        <div class="fun-desc">Người mạnh hơn phải đánh bằng tay không thuận. Chênh 200+ điểm mới nên thử!</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">🏓</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Vợt Ngắn</div>
-                                        <div class="fun-desc">Người mạnh hơn cầm vợt bằng 2 ngón tay hoặc dùng vợt ngắn hơn.</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">🎯</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Nửa Bàn</div>
-                                        <div class="fun-desc">Người mạnh chỉ được giao/đánh vào nửa bàn phải hoặc trái.</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">🔄</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Đổi Vợt</div>
-                                        <div class="fun-desc">Cứ mỗi 5 điểm, hai người đổi vợt cho nhau. Ai thích nghi nhanh hơn?</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">👥</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo 1 vs 2</div>
-                                        <div class="fun-desc">Top player đánh 1 chống 2 (đánh đôi vs đơn). Chênh 300+ điểm nên thử!</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">⏱️</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Tốc Độ</div>
-                                        <div class="fun-desc">Mỗi quả phải đánh trong 2 giây sau khi bóng đến. Chậm = mất điểm!</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">🍺</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Friday Night</div>
-                                        <div class="fun-desc">Mỗi 3 điểm thua phải uống 1 ngụm nước (hoặc bia nếu after-work). Set cuối sẽ rất vui!</div>
-                                    </div>
-                                </div>
-                                <div class="fun-item">
-                                    <div class="fun-icon">💪</div>
-                                    <div class="fun-content">
-                                        <div class="fun-title">Kèo Plank</div>
-                                        <div class="fun-desc">Người thua mỗi set phải plank 30 giây trước khi chơi set tiếp. Vừa chơi vừa tập thể lực!</div>
-                                    </div>
-                                </div>
+                                <div class="fun-item"><div class="fun-icon">🤚</div><div class="fun-content"><div class="fun-title">Kèo Tay Trái</div><div class="fun-desc">Người mạnh hơn đánh bằng tay không thuận. Chênh 200+ điểm nên thử!</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🏓</div><div class="fun-content"><div class="fun-title">Kèo Vợt Ngắn</div><div class="fun-desc">Người mạnh hơn cầm vợt bằng 2 ngón tay hoặc dùng vợt ngắn hơn.</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🎯</div><div class="fun-content"><div class="fun-title">Kèo Nửa Bàn</div><div class="fun-desc">Người mạnh chỉ được giao/đánh vào nửa bàn phải hoặc trái.</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🔄</div><div class="fun-content"><div class="fun-title">Kèo Đổi Vợt</div><div class="fun-desc">Cứ mỗi 5 điểm, hai người đổi vợt cho nhau. Ai thích nghi nhanh hơn?</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">👥</div><div class="fun-content"><div class="fun-title">Kèo 1 vs 2</div><div class="fun-desc">Top player đánh 1 chống 2. Chênh 300+ điểm nên thử!</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🏓</div><div class="fun-content"><div class="fun-title">Kèo Chỉ 1 Mặt (FH/BH)</div><div class="fun-desc">Người mạnh hơn chỉ được dùng 1 mặt vợt (Forehand hoặc Backhand), kể cả khi giao bóng!</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🚫</div><div class="fun-content"><div class="fun-title">Kèo Không Xoáy Ngang</div><div class="fun-desc">Người mạnh hơn không được giao bóng xoáy ngang (side-spin). Chỉ giao xoáy lên/xuống hoặc phẳng.</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">🍺</div><div class="fun-content"><div class="fun-title">Kèo Friday Night</div><div class="fun-desc">Mỗi 3 điểm thua phải uống 1 ngụm nước (hoặc bia nếu after-work).</div></div></div>
+                                <div class="fun-item"><div class="fun-icon">💪</div><div class="fun-content"><div class="fun-title">Kèo Plank</div><div class="fun-desc">Người thua mỗi set phải plank 30 giây trước khi chơi set tiếp.</div></div></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ADMIN TAB -->
+            <section id="tab-admin" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-gear"></i> Quản Lý (Admin)</h2>
+                </div>
+                <div class="admin-layout">
+                    <div class="admin-card">
+                        <h3><i class="fas fa-sliders"></i> Điều Chỉnh Điểm Tay Vợt</h3>
+                        <div class="admin-adjust">
+                            <select id="adjustPlayer" class="player-select"><option value="">-- Chọn tay vợt --</option></select>
+                            <div class="adjust-row">
+                                <label>Điểm mới:</label>
+                                <input type="number" id="adjustRating" class="score-input" min="100" max="2000" placeholder="0">
+                                <button class="btn-adjust" id="btnAdjust"><i class="fas fa-save"></i> Cập Nhật</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <h3><i class="fas fa-database"></i> Quản Lý Dữ Liệu</h3>
+                        <div class="admin-actions">
+                            <button class="btn-danger" id="btnResetAll"><i class="fas fa-trash"></i> Reset toàn bộ dữ liệu</button>
+                            <p class="admin-note">Thao tác này sẽ xóa tất cả lịch sử thi đấu và đặt lại điểm về ban đầu.</p>
                         </div>
                     </div>
                 </div>
@@ -451,8 +400,15 @@
         </footer>
     </div>
 
-    <div class="toast-container" id="toastContainer"></div>
+    <!-- Match Announcement Modal -->
+    <div class="modal-overlay" id="announceModal" style="display:none;">
+        <div class="modal-card announce-card">
+            <button class="modal-close" id="closeAnnounce"><i class="fas fa-times"></i></button>
+            <div id="announceContent"></div>
+        </div>
+    </div>
 
+    <div class="toast-container" id="toastContainer"></div>
     <script src="app.js"></script>
 </body>
 </html>

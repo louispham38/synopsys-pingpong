@@ -1,5 +1,5 @@
 // ============================================================
-// Synopsys Badminton Club - Ranking System
+// Synopsys Ping Pong VN07 Club - Ranking System
 // ============================================================
 
 const INITIAL_PLAYERS = [
@@ -40,8 +40,79 @@ const INITIAL_PLAYERS = [
     { id: 35, name: "Huy Nguyen",             group: "TPG",   email: "duchuyn@synopsys.com",  rating: 500 },
 ];
 
+const FUN_HANDICAP_LABELS = {
+    'tay-trai': '🤚 Tay Trái',
+    'vot-ngan': '🏓 Vợt Ngắn',
+    'nua-ban': '🎯 Nửa Bàn',
+    'doi-vot': '🔄 Đổi Vợt',
+    '1-vs-2': '👥 1 vs 2',
+    '1-mat': '🏓 Chỉ 1 Mặt (FH/BH)',
+    'khong-xoay': '🚫 Không Xoáy Ngang',
+    'friday-night': '🍺 Friday Night',
+    'plank': '💪 Plank',
+};
+
 const K_FACTOR = 32;
 const FORM_WINDOW = 5;
+const STORAGE_PREFIX = 'snps_pp_';
+
+// ============================================================
+// Auth System
+// ============================================================
+class Auth {
+    constructor() {
+        this.ensureAdmin();
+    }
+
+    getUsers() {
+        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'users') || '[]');
+    }
+
+    saveUsers(users) {
+        localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(users));
+    }
+
+    ensureAdmin() {
+        const users = this.getUsers();
+        const admin = users.find(u => u.username === 'admin');
+        if (!admin) {
+            users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
+            this.saveUsers(users);
+        }
+    }
+
+    login(username, password) {
+        const users = this.getUsers();
+        const user = users.find(u => u.username === username && u.password === password);
+        if (!user) return null;
+        sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
+        return user;
+    }
+
+    register(username, password, displayName) {
+        const users = this.getUsers();
+        if (users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
+        const user = { username, password, displayName, role: 'user' };
+        users.push(user);
+        this.saveUsers(users);
+        sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
+        return user;
+    }
+
+    getSession() {
+        const s = sessionStorage.getItem(STORAGE_PREFIX + 'session');
+        return s ? JSON.parse(s) : null;
+    }
+
+    logout() {
+        sessionStorage.removeItem(STORAGE_PREFIX + 'session');
+    }
+
+    isAdmin() {
+        const s = this.getSession();
+        return s && s.role === 'admin';
+    }
+}
 
 // ============================================================
 // State Management
@@ -53,51 +124,42 @@ class AppState {
     }
 
     loadPlayers() {
-        const saved = localStorage.getItem('snps_badminton_players');
+        const saved = localStorage.getItem(STORAGE_PREFIX + 'players');
         if (saved) return JSON.parse(saved);
         return INITIAL_PLAYERS.map(p => ({
-            ...p,
-            wins: 0,
-            losses: 0,
-            recentResults: [],
-            streak: 0,
-            streakType: null,
-            initialRating: p.rating,
+            ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
     }
 
     loadMatches() {
-        const saved = localStorage.getItem('snps_badminton_matches');
-        return saved ? JSON.parse(saved) : [];
+        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
     }
 
     savePlayers() {
-        localStorage.setItem('snps_badminton_players', JSON.stringify(this.players));
+        localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
     }
 
     saveMatches() {
-        localStorage.setItem('snps_badminton_matches', JSON.stringify(this.matches));
+        localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
     }
 
-    getPlayer(id) {
-        return this.players.find(p => p.id === id);
-    }
+    getPlayer(id) { return this.players.find(p => p.id === id); }
 
-    getSortedPlayers() {
-        return [...this.players].sort((a, b) => b.rating - a.rating);
-    }
+    getSortedPlayers() { return [...this.players].sort((a, b) => b.rating - a.rating); }
 
-    getGroups() {
-        return [...new Set(this.players.map(p => p.group))].sort();
-    }
+    getGroups() { return [...new Set(this.players.map(p => p.group))].sort(); }
 
     calculateElo(ratingA, ratingB, scoreA) {
         const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-        const changeA = Math.round(K_FACTOR * (scoreA - expectedA));
-        return changeA;
+        return Math.round(K_FACTOR * (scoreA - expectedA));
     }
 
-    recordMatch(playerAId, playerBId, sets, date) {
+    adjustRating(playerId, newRating) {
+        const p = this.getPlayer(playerId);
+        if (p) { p.rating = Math.max(100, Math.min(2000, newRating)); this.savePlayers(); }
+    }
+
+    recordMatch(playerAId, playerBId, sets, date, funHandicaps) {
         const playerA = this.getPlayer(playerAId);
         const playerB = this.getPlayer(playerBId);
         if (!playerA || !playerB) return null;
@@ -109,73 +171,50 @@ class AppState {
         });
 
         const winnerIsA = setsWonA > setsWonB;
-        const scoreA = winnerIsA ? 1 : 0;
-        const ratingChange = this.calculateElo(playerA.rating, playerB.rating, scoreA);
+        const ratingChange = this.calculateElo(playerA.rating, playerB.rating, winnerIsA ? 1 : 0);
 
         const match = {
-            id: Date.now(),
-            date: date,
+            id: Date.now(), date,
             playerAId, playerBId,
-            playerAName: playerA.name,
-            playerBName: playerB.name,
-            sets: sets,
-            setsWonA, setsWonB,
+            playerAName: playerA.name, playerBName: playerB.name,
+            sets, setsWonA, setsWonB,
             winnerId: winnerIsA ? playerAId : playerBId,
-            ratingChangeA: ratingChange,
-            ratingChangeB: -ratingChange,
-            ratingBeforeA: playerA.rating,
-            ratingBeforeB: playerB.rating,
+            ratingChangeA: ratingChange, ratingChangeB: -ratingChange,
+            ratingBeforeA: playerA.rating, ratingBeforeB: playerB.rating,
+            funHandicaps: funHandicaps || [],
         };
 
-        playerA.rating += ratingChange;
-        playerB.rating -= ratingChange;
-        playerA.rating = Math.max(100, playerA.rating);
-        playerB.rating = Math.max(100, playerB.rating);
+        playerA.rating = Math.max(100, playerA.rating + ratingChange);
+        playerB.rating = Math.max(100, playerB.rating - ratingChange);
 
-        if (winnerIsA) {
-            playerA.wins++;
-            playerB.losses++;
-            playerA.recentResults.push('W');
-            playerB.recentResults.push('L');
-        } else {
-            playerB.wins++;
-            playerA.losses++;
-            playerA.recentResults.push('L');
-            playerB.recentResults.push('W');
-        }
+        if (winnerIsA) { playerA.wins++; playerB.losses++; playerA.recentResults.push('W'); playerB.recentResults.push('L'); }
+        else { playerB.wins++; playerA.losses++; playerA.recentResults.push('L'); playerB.recentResults.push('W'); }
 
         if (playerA.recentResults.length > FORM_WINDOW) playerA.recentResults.shift();
         if (playerB.recentResults.length > FORM_WINDOW) playerB.recentResults.shift();
 
         this.updateStreak(playerA);
         this.updateStreak(playerB);
-
         this.matches.unshift(match);
         this.savePlayers();
         this.saveMatches();
-
         return match;
     }
 
     updateStreak(player) {
-        if (player.recentResults.length === 0) {
-            player.streak = 0;
-            player.streakType = null;
-            return;
-        }
+        if (player.recentResults.length === 0) { player.streak = 0; player.streakType = null; return; }
         const last = player.recentResults[player.recentResults.length - 1];
         let count = 0;
         for (let i = player.recentResults.length - 1; i >= 0; i--) {
-            if (player.recentResults[i] === last) count++;
-            else break;
+            if (player.recentResults[i] === last) count++; else break;
         }
         player.streak = count;
         player.streakType = last;
     }
 
     resetData() {
-        localStorage.removeItem('snps_badminton_players');
-        localStorage.removeItem('snps_badminton_matches');
+        localStorage.removeItem(STORAGE_PREFIX + 'players');
+        localStorage.removeItem(STORAGE_PREFIX + 'matches');
         this.players = this.loadPlayers();
         this.matches = this.loadMatches();
     }
@@ -185,24 +224,82 @@ class AppState {
 // UI Controller
 // ============================================================
 class UI {
-    constructor(state) {
+    constructor(state, auth) {
         this.state = state;
+        this.auth = auth;
         this.currentSort = { field: 'rating', dir: 'desc' };
-        this.init();
+        this.initAuth();
     }
 
-    init() {
+    // --- Auth UI ---
+    initAuth() {
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.auth === 'login' ? 'loginForm' : 'registerForm').classList.add('active');
+            });
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const user = this.auth.login(
+                document.getElementById('loginUser').value.trim(),
+                document.getElementById('loginPass').value
+            );
+            if (user) this.enterApp(user);
+            else document.getElementById('loginError').textContent = 'Sai tên đăng nhập hoặc mật khẩu!';
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const pass = document.getElementById('regPass').value;
+            const confirm = document.getElementById('regPassConfirm').value;
+            if (pass !== confirm) { document.getElementById('regError').textContent = 'Mật khẩu xác nhận không khớp!'; return; }
+            const result = this.auth.register(
+                document.getElementById('regUser').value.trim(),
+                pass,
+                document.getElementById('regDisplayName').value.trim()
+            );
+            if (result.error) document.getElementById('regError').textContent = result.error;
+            else this.enterApp(result);
+        });
+
+        const session = this.auth.getSession();
+        if (session) this.enterApp(session);
+    }
+
+    enterApp(user) {
+        document.getElementById('authModal').style.display = 'none';
+        document.getElementById('appMain').style.display = 'block';
+        document.getElementById('userName').textContent = user.displayName;
+
+        const isAdmin = user.role === 'admin';
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+        if (isAdmin) document.getElementById('adminTag').style.display = '';
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            this.auth.logout();
+            location.reload();
+        });
+
+        this.initApp();
+    }
+
+    initApp() {
         this.bindTabs();
         this.bindFilters();
         this.bindMatchForm();
         this.bindHistory();
         this.bindHandicapCalc();
+        this.bindAdmin();
+        this.bindAnnounce();
         this.populateSelects();
         this.render();
         document.getElementById('matchDate').valueAsDate = new Date();
     }
 
-    // --- Tabs ---
     bindTabs() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -214,7 +311,6 @@ class UI {
         });
     }
 
-    // --- Filters & Sort ---
     bindFilters() {
         const groupSelect = document.getElementById('filterGroup');
         this.state.getGroups().forEach(g => {
@@ -222,53 +318,70 @@ class UI {
             opt.value = g; opt.textContent = g;
             groupSelect.appendChild(opt);
         });
-
         document.getElementById('searchPlayer').addEventListener('input', () => this.renderTable());
         groupSelect.addEventListener('change', () => this.renderTable());
-
         document.querySelectorAll('.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const field = th.dataset.sort;
-                if (this.currentSort.field === field) {
-                    this.currentSort.dir = this.currentSort.dir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.currentSort = { field, dir: field === 'name' ? 'asc' : 'desc' };
-                }
+                if (this.currentSort.field === field) this.currentSort.dir = this.currentSort.dir === 'asc' ? 'desc' : 'asc';
+                else this.currentSort = { field, dir: field === 'name' ? 'asc' : 'desc' };
                 this.renderTable();
             });
         });
     }
 
-    // --- Match Form ---
     bindMatchForm() {
         const playerA = document.getElementById('playerA');
         const playerB = document.getElementById('playerB');
-        const submitBtn = document.getElementById('submitMatch');
 
         const updatePreview = () => {
             this.updatePlayerPreview('previewA', playerA.value);
             this.updatePlayerPreview('previewB', playerB.value);
+            this.updateMatchHandicapBanner();
             this.updateMatchSummary();
             this.validateMatchForm();
         };
 
         playerA.addEventListener('change', updatePreview);
         playerB.addEventListener('change', updatePreview);
-
-        document.querySelectorAll('.score-input').forEach(input => {
-            input.addEventListener('input', () => {
-                this.updateMatchSummary();
-                this.validateMatchForm();
-            });
+        document.querySelectorAll('#setsContainer .score-input').forEach(input => {
+            input.addEventListener('input', () => { this.updateMatchSummary(); this.validateMatchForm(); });
         });
+        document.getElementById('submitMatch').addEventListener('click', () => this.submitMatch());
+    }
 
-        submitBtn.addEventListener('click', () => this.submitMatch());
+    updateMatchHandicapBanner() {
+        const aId = parseInt(document.getElementById('playerA').value);
+        const bId = parseInt(document.getElementById('playerB').value);
+        const banner = document.getElementById('matchHandicapBanner');
+        const funSel = document.getElementById('funHandicapSelect');
+
+        if (!aId || !bId || aId === bId) { banner.style.display = 'none'; funSel.style.display = 'none'; return; }
+
+        const pA = this.state.getPlayer(aId);
+        const pB = this.state.getPlayer(bId);
+        const diff = Math.abs(pA.rating - pB.rating);
+        const stronger = pA.rating >= pB.rating ? pA : pB;
+        const weaker = pA.rating >= pB.rating ? pB : pA;
+        const h = this.getHandicap(diff);
+
+        banner.innerHTML = `
+            <div class="hb-title"><i class="fas fa-scale-balanced"></i> Kèo Chấp Gợi Ý</div>
+            <div class="hb-body">
+                <strong>${stronger.name}</strong> (${stronger.rating}) chấp <strong>${weaker.name}</strong> (${weaker.rating})
+                <div class="hb-sets">${h.sets[0]}-${h.sets[1]}-${h.sets[2]}</div>
+                <span class="hb-label">${h.label} (chênh ${diff} điểm)</span>
+            </div>
+        `;
+        banner.style.display = 'block';
+        funSel.style.display = 'block';
     }
 
     bindHistory() {
         document.getElementById('clearHistory').addEventListener('click', () => {
-            if (confirm('Bạn có chắc muốn xóa toàn bộ lịch sử và đặt lại điểm?')) {
+            if (confirm('Xóa toàn bộ lịch sử và đặt lại điểm?')) {
                 this.state.resetData();
+                this.populateSelects();
                 this.render();
                 this.showToast('Đã đặt lại dữ liệu', 'info');
             }
@@ -281,6 +394,98 @@ class UI {
         const update = () => this.updateHandicapResult();
         hA.addEventListener('change', update);
         hB.addEventListener('change', update);
+    }
+
+    bindAdmin() {
+        const adjustPlayer = document.getElementById('adjustPlayer');
+        const adjustRating = document.getElementById('adjustRating');
+
+        adjustPlayer.addEventListener('change', () => {
+            const p = this.state.getPlayer(parseInt(adjustPlayer.value));
+            if (p) adjustRating.value = p.rating;
+        });
+
+        document.getElementById('btnAdjust').addEventListener('click', () => {
+            const id = parseInt(adjustPlayer.value);
+            const newRating = parseInt(adjustRating.value);
+            if (!id || isNaN(newRating)) { this.showToast('Chọn tay vợt và nhập điểm!', 'error'); return; }
+            this.state.adjustRating(id, newRating);
+            this.populateSelects();
+            this.render();
+            this.showToast('Đã cập nhật điểm!', 'success');
+        });
+
+        document.getElementById('btnResetAll').addEventListener('click', () => {
+            if (confirm('RESET TẤT CẢ? Thao tác không thể hoàn tác!')) {
+                this.state.resetData();
+                this.populateSelects();
+                this.render();
+                this.showToast('Đã reset toàn bộ dữ liệu', 'info');
+            }
+        });
+    }
+
+    bindAnnounce() {
+        document.getElementById('btnAnnounce').addEventListener('click', () => this.showAnnouncement());
+        document.getElementById('closeAnnounce').addEventListener('click', () => {
+            document.getElementById('announceModal').style.display = 'none';
+        });
+        document.getElementById('announceModal').addEventListener('click', e => {
+            if (e.target.id === 'announceModal') document.getElementById('announceModal').style.display = 'none';
+        });
+    }
+
+    showAnnouncement() {
+        const aId = parseInt(document.getElementById('handicapPlayerA').value);
+        const bId = parseInt(document.getElementById('handicapPlayerB').value);
+        if (!aId || !bId || aId === bId) { this.showToast('Chọn 2 tay vợt trước!', 'error'); return; }
+
+        const pA = this.state.getPlayer(aId);
+        const pB = this.state.getPlayer(bId);
+        const diff = Math.abs(pA.rating - pB.rating);
+        const stronger = pA.rating >= pB.rating ? pA : pB;
+        const weaker = pA.rating >= pB.rating ? pB : pA;
+        const h = this.getHandicap(diff);
+
+        const selectedFun = [];
+        document.querySelectorAll('#guideFunCheckList input:checked').forEach(cb => {
+            selectedFun.push(FUN_HANDICAP_LABELS[cb.value] || cb.value);
+        });
+
+        const content = document.getElementById('announceContent');
+        content.innerHTML = `
+            <div class="announce-header">
+                <i class="fas fa-bullhorn"></i>
+                <h2>THÔNG BÁO TRẬN ĐẤU</h2>
+            </div>
+            <div class="announce-players">
+                <div class="announce-p">
+                    <div class="announce-name">${pA.name}</div>
+                    <div class="announce-rating">${pA.rating} pts</div>
+                </div>
+                <div class="announce-vs">VS</div>
+                <div class="announce-p">
+                    <div class="announce-name">${pB.name}</div>
+                    <div class="announce-rating">${pB.rating} pts</div>
+                </div>
+            </div>
+            <div class="announce-handicap">
+                <div class="announce-h-label">${h.label}</div>
+                <div class="announce-h-sets">
+                    <span>Set 1: <strong>0-${h.sets[0]}</strong></span>
+                    <span>Set 2: <strong>0-${h.sets[1]}</strong></span>
+                    <span>Set 3: <strong>0-${h.sets[2]}</strong></span>
+                </div>
+                <p>${stronger.name} chấp ${weaker.name}</p>
+            </div>
+            ${selectedFun.length > 0 ? `
+            <div class="announce-fun">
+                <div class="announce-fun-title">Kèo Vui Áp Dụng:</div>
+                <div class="announce-fun-tags">${selectedFun.map(f => `<span class="announce-fun-tag">${f}</span>`).join('')}</div>
+            </div>` : ''}
+            <div class="announce-footer">Synopsys Ping Pong VN07 Club 🏓</div>
+        `;
+        document.getElementById('announceModal').style.display = 'flex';
     }
 
     getHandicap(diff) {
@@ -298,8 +503,9 @@ class UI {
         const aId = parseInt(document.getElementById('handicapPlayerA').value);
         const bId = parseInt(document.getElementById('handicapPlayerB').value);
         const result = document.getElementById('handicapResult');
+        const funSel = document.getElementById('guideFunSelect');
 
-        if (!aId || !bId || aId === bId) { result.style.display = 'none'; return; }
+        if (!aId || !bId || aId === bId) { result.style.display = 'none'; funSel.style.display = 'none'; return; }
 
         const pA = this.state.getPlayer(aId);
         const pB = this.state.getPlayer(bId);
@@ -307,12 +513,6 @@ class UI {
         const stronger = pA.rating >= pB.rating ? pA : pB;
         const weaker = pA.rating >= pB.rating ? pB : pA;
         const h = this.getHandicap(diff);
-
-        const funSuggestions = [];
-        if (diff >= 200) funSuggestions.push('🤚 Thử kèo Tay Trái!');
-        if (diff >= 150) funSuggestions.push('🎯 Thử kèo Nửa Bàn!');
-        if (diff >= 300) funSuggestions.push('👥 Thử kèo 1 vs 2!');
-        if (diff >= 100) funSuggestions.push('💪 Thử kèo Plank cho vui!');
 
         result.innerHTML = `
             <div class="handicap-result-card">
@@ -322,10 +522,7 @@ class UI {
                         <div class="hrc-name">${stronger.name}</div>
                         <div class="hrc-rating">${stronger.rating} pts</div>
                     </div>
-                    <div class="hrc-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                        <div class="hrc-diff">Chênh ${diff} điểm</div>
-                    </div>
+                    <div class="hrc-arrow"><i class="fas fa-arrow-right"></i><div class="hrc-diff">Chênh ${diff} điểm</div></div>
                     <div class="hrc-player hrc-weaker">
                         <div class="hrc-label">Được chấp</div>
                         <div class="hrc-name">${weaker.name}</div>
@@ -339,21 +536,17 @@ class UI {
                         <span class="hrc-set">Set 2: <strong>0 - ${h.sets[1]}</strong></span>
                         <span class="hrc-set">Set 3: <strong>0 - ${h.sets[2]}</strong></span>
                     </div>
-                    <div class="hrc-note">${stronger.name} bắt đầu mỗi set với 0 điểm, ${weaker.name} được ${h.sets.join('-')} điểm trước.</div>
+                    <div class="hrc-note">${stronger.name} bắt đầu 0, ${weaker.name} được ${h.sets.join('-')} trước.</div>
                 </div>
-                ${funSuggestions.length > 0 ? `
-                <div class="hrc-fun">
-                    <div class="hrc-fun-label">Gợi ý kèo vui:</div>
-                    ${funSuggestions.map(s => `<span class="hrc-fun-tag">${s}</span>`).join('')}
-                </div>` : ''}
             </div>
         `;
         result.style.display = 'block';
+        funSel.style.display = 'block';
     }
 
     populateSelects() {
         const sorted = this.state.getSortedPlayers();
-        ['playerA', 'playerB', 'handicapPlayerA', 'handicapPlayerB'].forEach(selId => {
+        ['playerA', 'playerB', 'handicapPlayerA', 'handicapPlayerB', 'adjustPlayer'].forEach(selId => {
             const sel = document.getElementById(selId);
             if (!sel) return;
             const current = sel.value;
@@ -374,72 +567,43 @@ class UI {
         const p = this.state.getPlayer(parseInt(playerId));
         if (!p) return;
         const form = this.getFormIndicator(p);
-        container.innerHTML = `
-            <div class="preview-card">
-                <div class="preview-name">${p.name}</div>
-                <div class="preview-details">
-                    <span class="preview-rating">${p.rating} pts</span>
-                    <span class="preview-group badge-${p.group.toLowerCase()}">${p.group}</span>
-                </div>
-                <div class="preview-record">${p.wins}W - ${p.losses}L ${form}</div>
-            </div>
-        `;
+        container.innerHTML = `<div class="preview-card"><div class="preview-name">${p.name}</div><div class="preview-details"><span class="preview-rating">${p.rating} pts</span><span class="preview-group badge-${p.group.toLowerCase()}">${p.group}</span></div><div class="preview-record">${p.wins}W - ${p.losses}L ${form}</div></div>`;
     }
 
     updateMatchSummary() {
         const aId = parseInt(document.getElementById('playerA').value);
         const bId = parseInt(document.getElementById('playerB').value);
         const summary = document.getElementById('matchSummary');
-
         if (!aId || !bId || aId === bId) { summary.style.display = 'none'; return; }
-
         const sets = this.getSetScores();
         const validSets = sets.filter(s => s.scoreA > 0 || s.scoreB > 0);
         if (validSets.length === 0) { summary.style.display = 'none'; return; }
-
-        const pA = this.state.getPlayer(aId);
-        const pB = this.state.getPlayer(bId);
+        const pA = this.state.getPlayer(aId), pB = this.state.getPlayer(bId);
         let setsA = 0, setsB = 0;
-        validSets.forEach(s => {
-            if (s.scoreA > s.scoreB) setsA++;
-            else if (s.scoreB > s.scoreA) setsB++;
-        });
-
+        validSets.forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
         const winnerIsA = setsA > setsB;
         const change = this.state.calculateElo(pA.rating, pB.rating, winnerIsA ? 1 : 0);
-
-        const content = document.getElementById('summaryContent');
-        content.innerHTML = `
+        document.getElementById('summaryContent').innerHTML = `
             <div class="summary-row">
                 <div class="summary-player ${winnerIsA ? 'winner' : 'loser'}">
-                    <span class="summary-name">${pA.name}</span>
-                    <span class="summary-sets">${setsA} set</span>
-                    <span class="summary-delta ${change >= 0 ? 'positive' : 'negative'}">
-                        ${change >= 0 ? '+' : ''}${change} pts
-                    </span>
+                    <span class="summary-name">${pA.name}</span><span class="summary-sets">${setsA} set</span>
+                    <span class="summary-delta ${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change} pts</span>
                     <span class="summary-new">${pA.rating + change}</span>
                 </div>
                 <div class="summary-vs">vs</div>
                 <div class="summary-player ${!winnerIsA ? 'winner' : 'loser'}">
-                    <span class="summary-name">${pB.name}</span>
-                    <span class="summary-sets">${setsB} set</span>
-                    <span class="summary-delta ${-change >= 0 ? 'positive' : 'negative'}">
-                        ${-change >= 0 ? '+' : ''}${-change} pts
-                    </span>
+                    <span class="summary-name">${pB.name}</span><span class="summary-sets">${setsB} set</span>
+                    <span class="summary-delta ${-change >= 0 ? 'positive' : 'negative'}">${-change >= 0 ? '+' : ''}${-change} pts</span>
                     <span class="summary-new">${pB.rating - change}</span>
                 </div>
-            </div>
-        `;
+            </div>`;
         summary.style.display = 'block';
     }
 
     getSetScores() {
         const sets = [];
-        document.querySelectorAll('.set-row').forEach(row => {
-            sets.push({
-                scoreA: parseInt(row.querySelector('.score-a').value) || 0,
-                scoreB: parseInt(row.querySelector('.score-b').value) || 0,
-            });
+        document.querySelectorAll('#setsContainer .set-row').forEach(row => {
+            sets.push({ scoreA: parseInt(row.querySelector('.score-a').value) || 0, scoreB: parseInt(row.querySelector('.score-b').value) || 0 });
         });
         return sets;
     }
@@ -450,9 +614,7 @@ class UI {
         const sets = this.getSetScores();
         const validSets = sets.filter(s => s.scoreA > 0 || s.scoreB > 0);
         const hasWinner = validSets.some(s => s.scoreA !== s.scoreB);
-
-        const valid = aId && bId && aId !== bId && validSets.length > 0 && hasWinner;
-        document.getElementById('submitMatch').disabled = !valid;
+        document.getElementById('submitMatch').disabled = !(aId && bId && aId !== bId && validSets.length > 0 && hasWinner);
     }
 
     submitMatch() {
@@ -461,7 +623,10 @@ class UI {
         const sets = this.getSetScores().filter(s => s.scoreA > 0 || s.scoreB > 0);
         const date = document.getElementById('matchDate').value;
 
-        const match = this.state.recordMatch(aId, bId, sets, date);
+        const funHandicaps = [];
+        document.querySelectorAll('#funHandicapSelect .fun-check input:checked').forEach(cb => funHandicaps.push(cb.value));
+
+        const match = this.state.recordMatch(aId, bId, sets, date, funHandicaps);
         if (!match) { this.showToast('Lỗi khi lưu kết quả!', 'error'); return; }
 
         const winner = match.winnerId === aId ? match.playerAName : match.playerBName;
@@ -472,14 +637,16 @@ class UI {
         document.getElementById('previewA').innerHTML = '';
         document.getElementById('previewB').innerHTML = '';
         document.getElementById('matchSummary').style.display = 'none';
-        document.querySelectorAll('.score-input').forEach(i => i.value = '');
+        document.getElementById('matchHandicapBanner').style.display = 'none';
+        document.getElementById('funHandicapSelect').style.display = 'none';
+        document.querySelectorAll('#setsContainer .score-input').forEach(i => i.value = '');
+        document.querySelectorAll('#funHandicapSelect .fun-check input').forEach(cb => cb.checked = false);
         document.getElementById('submitMatch').disabled = true;
 
         this.populateSelects();
         this.render();
     }
 
-    // --- Rendering ---
     render() {
         this.renderStats();
         this.renderTopPlayers();
@@ -495,120 +662,63 @@ class UI {
 
     renderTopPlayers() {
         const top = this.state.getSortedPlayers().slice(0, 3);
-        const elements = [
-            document.getElementById('top1'),
-            document.getElementById('top2'),
-            document.getElementById('top3'),
-        ];
-        top.forEach((p, i) => {
-            if (!elements[i]) return;
-            elements[i].querySelector('.top-name').textContent = p.name;
-            elements[i].querySelector('.top-rating').textContent = p.rating + ' pts';
+        ['top1', 'top2', 'top3'].forEach((id, i) => {
+            const el = document.getElementById(id);
+            if (top[i]) {
+                el.querySelector('.top-name').textContent = top[i].name;
+                el.querySelector('.top-rating').textContent = top[i].rating + ' pts';
+            }
         });
     }
 
     renderTable() {
         const search = document.getElementById('searchPlayer').value.toLowerCase();
         const group = document.getElementById('filterGroup').value;
-
         let players = this.state.getSortedPlayers();
-
-        if (search) {
-            players = players.filter(p =>
-                p.name.toLowerCase().includes(search) ||
-                p.email.toLowerCase().includes(search)
-            );
-        }
-        if (group !== 'all') {
-            players = players.filter(p => p.group === group);
-        }
+        if (search) players = players.filter(p => p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search));
+        if (group !== 'all') players = players.filter(p => p.group === group);
 
         const { field, dir } = this.currentSort;
         players.sort((a, b) => {
             let va, vb;
             switch (field) {
-                case 'name':  va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+                case 'name': va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
                 case 'group': va = a.group; vb = b.group; break;
-                case 'rating': va = a.rating; vb = b.rating; break;
                 default: va = a.rating; vb = b.rating;
             }
-            if (va < vb) return dir === 'asc' ? -1 : 1;
-            if (va > vb) return dir === 'asc' ? 1 : -1;
-            return 0;
+            return va < vb ? (dir === 'asc' ? -1 : 1) : va > vb ? (dir === 'asc' ? 1 : -1) : 0;
         });
 
         const allSorted = this.state.getSortedPlayers();
-
-        const tbody = document.getElementById('rankingBody');
-        tbody.innerHTML = players.map(p => {
-            const globalRank = allSorted.findIndex(x => x.id === p.id) + 1;
+        document.getElementById('rankingBody').innerHTML = players.map(p => {
+            const rank = allSorted.findIndex(x => x.id === p.id) + 1;
             const form = this.getFormDots(p);
             const formLabel = this.getFormLabel(p);
-            const ratingDelta = p.rating - p.initialRating;
-            const deltaClass = ratingDelta > 0 ? 'positive' : ratingDelta < 0 ? 'negative' : 'neutral';
-            const deltaStr = ratingDelta > 0 ? `+${ratingDelta}` : `${ratingDelta}`;
-            const streakStr = this.getStreakBadge(p);
+            const delta = p.rating - p.initialRating;
+            const cls = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
             const total = p.wins + p.losses;
-            const winRate = total > 0 ? Math.round(p.wins / total * 100) : 0;
-
-            return `
-                <tr class="${globalRank <= 3 ? 'top-rank rank-' + globalRank : ''}">
-                    <td class="col-rank">
-                        <span class="rank-number">${globalRank}</span>
-                    </td>
-                    <td class="col-name">
-                        <div class="player-info">
-                            <div class="player-avatar">${p.name.charAt(0)}</div>
-                            <div>
-                                <div class="player-name-text">${p.name}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="col-group">
-                        <span class="group-badge badge-${p.group.toLowerCase()}">${p.group}</span>
-                    </td>
-                    <td class="col-email">${p.email}</td>
-                    <td class="col-rating">
-                        <div class="rating-display">
-                            <span class="rating-value">${p.rating}</span>
-                            <span class="rating-delta ${deltaClass}">${deltaStr}</span>
-                        </div>
-                    </td>
-                    <td class="col-form">
-                        <div class="form-display">
-                            <div class="form-dots">${form}</div>
-                            <span class="form-label ${formLabel.cls}">${formLabel.text}</span>
-                        </div>
-                    </td>
-                    <td class="col-record">
-                        <div class="record-display">
-                            <span>${p.wins}W - ${p.losses}L</span>
-                            ${total > 0 ? `<div class="win-rate-bar"><div class="win-rate-fill" style="width:${winRate}%"></div></div>` : ''}
-                        </div>
-                    </td>
-                    <td class="col-streak">${streakStr}</td>
-                </tr>
-            `;
+            const wr = total > 0 ? Math.round(p.wins / total * 100) : 0;
+            return `<tr class="${rank <= 3 ? 'top-rank rank-' + rank : ''}">
+                <td class="col-rank"><span class="rank-number">${rank}</span></td>
+                <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text">${p.name}</div></div></div></td>
+                <td class="col-group"><span class="group-badge badge-${p.group.toLowerCase()}">${p.group}</span></td>
+                <td class="col-email">${p.email}</td>
+                <td class="col-rating"><div class="rating-display"><span class="rating-value">${p.rating}</span><span class="rating-delta ${cls}">${delta > 0 ? '+' : ''}${delta}</span></div></td>
+                <td class="col-form"><div class="form-display"><div class="form-dots">${form}</div><span class="form-label ${formLabel.cls}">${formLabel.text}</span></div></td>
+                <td class="col-record"><div class="record-display"><span>${p.wins}W - ${p.losses}L</span>${total > 0 ? `<div class="win-rate-bar"><div class="win-rate-fill" style="width:${wr}%"></div></div>` : ''}</div></td>
+                <td class="col-streak">${this.getStreakBadge(p)}</td>
+            </tr>`;
         }).join('');
     }
 
-    getFormDots(player) {
-        if (!player.recentResults || player.recentResults.length === 0) {
-            return '<span class="no-data">-</span>';
-        }
-        return player.recentResults.map(r =>
-            `<span class="form-dot ${r === 'W' ? 'dot-win' : 'dot-loss'}">${r}</span>`
-        ).join('');
+    getFormDots(p) {
+        if (!p.recentResults || !p.recentResults.length) return '<span class="no-data">-</span>';
+        return p.recentResults.map(r => `<span class="form-dot ${r === 'W' ? 'dot-win' : 'dot-loss'}">${r}</span>`).join('');
     }
 
-    getFormLabel(player) {
-        if (!player.recentResults || player.recentResults.length === 0) {
-            return { text: 'Chưa có', cls: 'form-none' };
-        }
-        const wins = player.recentResults.filter(r => r === 'W').length;
-        const total = player.recentResults.length;
-        const rate = wins / total;
-
+    getFormLabel(p) {
+        if (!p.recentResults || !p.recentResults.length) return { text: 'Chưa có', cls: 'form-none' };
+        const rate = p.recentResults.filter(r => r === 'W').length / p.recentResults.length;
         if (rate >= 0.8) return { text: '🔥 Xuất sắc', cls: 'form-excellent' };
         if (rate >= 0.6) return { text: '📈 Tốt', cls: 'form-good' };
         if (rate >= 0.4) return { text: '➡️ Ổn định', cls: 'form-ok' };
@@ -616,85 +726,58 @@ class UI {
         return { text: '❄️ Rất kém', cls: 'form-terrible' };
     }
 
-    getFormIndicator(player) {
-        if (!player.recentResults || player.recentResults.length === 0) return '';
-        const wins = player.recentResults.filter(r => r === 'W').length;
-        const total = player.recentResults.length;
-        const rate = wins / total;
+    getFormIndicator(p) {
+        if (!p.recentResults || !p.recentResults.length) return '';
+        const rate = p.recentResults.filter(r => r === 'W').length / p.recentResults.length;
         if (rate >= 0.6) return '<span class="form-indicator good">↑</span>';
         if (rate >= 0.4) return '<span class="form-indicator neutral">→</span>';
         return '<span class="form-indicator bad">↓</span>';
     }
 
-    getStreakBadge(player) {
-        if (!player.streak || player.streak < 2) return '-';
-        const type = player.streakType === 'W' ? 'streak-win' : 'streak-loss';
-        const icon = player.streakType === 'W' ? '🔥' : '❄️';
-        return `<span class="streak-badge ${type}">${icon} ${player.streak}</span>`;
+    getStreakBadge(p) {
+        if (!p.streak || p.streak < 2) return '-';
+        return `<span class="streak-badge ${p.streakType === 'W' ? 'streak-win' : 'streak-loss'}">${p.streakType === 'W' ? '🔥' : '❄️'} ${p.streak}</span>`;
     }
 
     renderHistory() {
         const container = document.getElementById('historyList');
-        if (this.state.matches.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <p>Chưa có trận đấu nào được ghi nhận</p>
-                </div>
-            `;
+        if (!this.state.matches.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Chưa có trận đấu nào được ghi nhận</p></div>';
             return;
         }
-
         container.innerHTML = this.state.matches.map(m => {
-            const isAWinner = m.winnerId === m.playerAId;
+            const isAWin = m.winnerId === m.playerAId;
             const setsStr = m.sets.map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
-            return `
-                <div class="history-card">
-                    <div class="history-date">
-                        <i class="fas fa-calendar"></i> ${this.formatDate(m.date)}
-                    </div>
-                    <div class="history-match">
-                        <div class="history-player ${isAWinner ? 'h-winner' : 'h-loser'}">
-                            <span class="h-name">${m.playerAName}</span>
-                            <span class="h-sets">${m.setsWonA}</span>
-                        </div>
-                        <div class="history-score">${setsStr}</div>
-                        <div class="history-player ${!isAWinner ? 'h-winner' : 'h-loser'}">
-                            <span class="h-sets">${m.setsWonB}</span>
-                            <span class="h-name">${m.playerBName}</span>
-                        </div>
-                    </div>
-                    <div class="history-rating-changes">
-                        <span class="${m.ratingChangeA >= 0 ? 'positive' : 'negative'}">
-                            ${m.playerAName}: ${m.ratingChangeA >= 0 ? '+' : ''}${m.ratingChangeA}
-                        </span>
-                        <span class="${m.ratingChangeB >= 0 ? 'positive' : 'negative'}">
-                            ${m.playerBName}: ${m.ratingChangeB >= 0 ? '+' : ''}${m.ratingChangeB}
-                        </span>
-                    </div>
+            const funTags = (m.funHandicaps || []).map(f => `<span class="history-fun-tag">${FUN_HANDICAP_LABELS[f] || f}</span>`).join('');
+            return `<div class="history-card">
+                <div class="history-date"><i class="fas fa-calendar"></i> ${this.formatDate(m.date)}</div>
+                <div class="history-match">
+                    <div class="history-player ${isAWin ? 'h-winner' : 'h-loser'}"><span class="h-name">${m.playerAName}</span><span class="h-sets">${m.setsWonA}</span></div>
+                    <div class="history-score">${setsStr}</div>
+                    <div class="history-player ${!isAWin ? 'h-winner' : 'h-loser'}"><span class="h-sets">${m.setsWonB}</span><span class="h-name">${m.playerBName}</span></div>
                 </div>
-            `;
+                ${funTags ? `<div class="history-fun">${funTags}</div>` : ''}
+                <div class="history-rating-changes">
+                    <span class="${m.ratingChangeA >= 0 ? 'positive' : 'negative'}">${m.playerAName}: ${m.ratingChangeA >= 0 ? '+' : ''}${m.ratingChangeA}</span>
+                    <span class="${m.ratingChangeB >= 0 ? 'positive' : 'negative'}">${m.playerBName}: ${m.ratingChangeB >= 0 ? '+' : ''}${m.ratingChangeB}</span>
+                </div>
+            </div>`;
         }).join('');
     }
 
-    formatDate(dateStr) {
-        if (!dateStr) return 'N/A';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    formatDate(d) {
+        if (!d) return 'N/A';
+        return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
     showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
-        toast.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
         container.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 }
 
@@ -702,6 +785,7 @@ class UI {
 // Initialize
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    const auth = new Auth();
     const state = new AppState();
-    new UI(state);
+    new UI(state, auth);
 });
