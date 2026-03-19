@@ -373,15 +373,27 @@
                     <h2><i class="fas fa-gear"></i> Quản Lý (Admin)</h2>
                 </div>
                 <div class="admin-layout">
-                    <!-- Adjust Rating -->
-                    <div class="admin-card">
-                        <h3><i class="fas fa-sliders"></i> Điều Chỉnh Điểm Tay Vợt</h3>
+                    <!-- Edit Player -->
+                    <div class="admin-card admin-card-full">
+                        <h3><i class="fas fa-sliders"></i> Điều Chỉnh Thông Tin Tay Vợt</h3>
                         <div class="admin-adjust">
                             <select id="adjustPlayer" class="player-select"><option value="">-- Chọn tay vợt --</option></select>
-                            <div class="adjust-row">
-                                <label>Điểm mới:</label>
-                                <input type="number" id="adjustRating" class="score-input" min="100" max="2000" placeholder="0">
-                                <button class="btn-adjust" id="btnAdjust"><i class="fas fa-save"></i> Cập Nhật</button>
+                            <div id="editPlayerFields" class="edit-player-fields" style="display:none;">
+                                <div class="form-row-2">
+                                    <div class="form-group"><label>Tên</label><input type="text" id="editName" placeholder="Tên tay vợt"></div>
+                                    <div class="form-group"><label>Email</label><input type="text" id="editEmail" placeholder="email@synopsys.com"></div>
+                                </div>
+                                <div class="form-row-3">
+                                    <div class="form-group"><label>Nhóm</label>
+                                        <select id="editGroup" class="filter-select">
+                                            <option value="Field">Field</option><option value="PV">PV</option><option value="PD">PD</option>
+                                            <option value="SSG">SSG</option><option value="AE">AE</option><option value="IPG">IPG</option>
+                                            <option value="CSG">CSG</option><option value="TPG">TPG</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group"><label>Điểm</label><input type="number" id="adjustRating" min="100" max="2000" placeholder="0"></div>
+                                    <div class="form-group form-group-btn"><button class="btn-adjust" id="btnAdjust"><i class="fas fa-save"></i> Lưu Thay Đổi</button></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -424,8 +436,8 @@
                     <div class="admin-card admin-card-full">
                         <h3><i class="fas fa-database"></i> Quản Lý Dữ Liệu</h3>
                         <div class="admin-actions">
-                            <button class="btn-danger" id="btnResetAll"><i class="fas fa-trash"></i> Reset toàn bộ dữ liệu</button>
-                            <p class="admin-note">Thao tác này sẽ xóa tất cả lịch sử thi đấu và đặt lại điểm về ban đầu. Không thể hoàn tác!</p>
+                            <button class="btn-danger" id="btnResetAll"><i class="fas fa-rotate-left"></i> Reset lịch sử thi đấu</button>
+                            <p class="admin-note">Xóa toàn bộ lịch sử thi đấu (thắng/thua/phong độ). Điểm hiện tại sẽ được giữ lại làm điểm gốc mới. Không thể hoàn tác!</p>
                         </div>
                     </div>
                 </div>

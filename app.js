@@ -159,6 +159,30 @@ class AppState {
         if (p) { p.rating = Math.max(100, Math.min(2000, newRating)); this.savePlayers(); }
     }
 
+    editPlayer(playerId, updates) {
+        const p = this.getPlayer(playerId);
+        if (!p) return;
+        if (updates.name) p.name = updates.name;
+        if (updates.email !== undefined) p.email = updates.email;
+        if (updates.group) p.group = updates.group;
+        if (updates.rating !== undefined) p.rating = Math.max(100, Math.min(2000, updates.rating));
+        this.savePlayers();
+    }
+
+    resetKeepRatings() {
+        this.players.forEach(p => {
+            p.initialRating = p.rating;
+            p.wins = 0;
+            p.losses = 0;
+            p.recentResults = [];
+            p.streak = 0;
+            p.streakType = null;
+        });
+        this.matches = [];
+        this.savePlayers();
+        this.saveMatches();
+    }
+
     addPlayer(name, group, email, rating) {
         const maxId = this.players.reduce((max, p) => Math.max(max, p.id), 0);
         const player = {
@@ -405,11 +429,11 @@ class UI {
 
     bindHistory() {
         document.getElementById('clearHistory').addEventListener('click', () => {
-            if (confirm('Xóa toàn bộ lịch sử và đặt lại điểm?')) {
-                this.state.resetData();
+            if (confirm('Xóa toàn bộ lịch sử? Điểm hiện tại sẽ được giữ lại.')) {
+                this.state.resetKeepRatings();
                 this.populateSelects();
                 this.render();
-                this.showToast('Đã đặt lại dữ liệu', 'info');
+                this.showToast('Đã xóa lịch sử, giữ nguyên điểm', 'info');
             }
         });
     }
@@ -425,21 +449,40 @@ class UI {
     bindAdmin() {
         const adjustPlayer = document.getElementById('adjustPlayer');
         const adjustRating = document.getElementById('adjustRating');
+        const editFields = document.getElementById('editPlayerFields');
+        const editName = document.getElementById('editName');
+        const editEmail = document.getElementById('editEmail');
+        const editGroup = document.getElementById('editGroup');
 
         adjustPlayer.addEventListener('change', () => {
             const p = this.state.getPlayer(parseInt(adjustPlayer.value));
-            if (p) adjustRating.value = p.rating;
+            if (p) {
+                editFields.style.display = 'block';
+                editName.value = p.name;
+                editEmail.value = p.email || '';
+                editGroup.value = p.group;
+                adjustRating.value = p.rating;
+            } else {
+                editFields.style.display = 'none';
+            }
         });
 
         document.getElementById('btnAdjust').addEventListener('click', () => {
             const id = parseInt(adjustPlayer.value);
-            const newRating = parseInt(adjustRating.value);
-            if (!id || isNaN(newRating)) { this.showToast('Chọn tay vợt và nhập điểm!', 'error'); return; }
-            this.state.adjustRating(id, newRating);
+            if (!id) { this.showToast('Chọn tay vợt!', 'error'); return; }
+            const name = editName.value.trim();
+            if (!name) { this.showToast('Tên không được để trống!', 'error'); return; }
+            this.state.editPlayer(id, {
+                name,
+                email: editEmail.value.trim(),
+                group: editGroup.value,
+                rating: parseInt(adjustRating.value) || 500
+            });
             this.populateSelects();
+            adjustPlayer.value = String(id);
             this.render();
             this.renderAdminHistory();
-            this.showToast('Đã cập nhật điểm!', 'success');
+            this.showToast('Đã cập nhật thông tin!', 'success');
         });
 
         document.getElementById('btnAddPlayer').addEventListener('click', () => {
@@ -471,12 +514,12 @@ class UI {
         });
 
         document.getElementById('btnResetAll').addEventListener('click', () => {
-            if (confirm('RESET TẤT CẢ? Thao tác không thể hoàn tác!')) {
-                this.state.resetData();
+            if (confirm('RESET TẤT CẢ lịch sử? Điểm hiện tại sẽ được giữ lại làm điểm gốc mới. Thao tác không thể hoàn tác!')) {
+                this.state.resetKeepRatings();
                 this.populateSelects();
                 this.render();
                 this.renderAdminHistory();
-                this.showToast('Đã reset toàn bộ dữ liệu', 'info');
+                this.showToast('Đã reset lịch sử, giữ nguyên điểm hiện tại', 'info');
             }
         });
 

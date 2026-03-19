@@ -2286,6 +2286,51 @@ body {
     gap: 12px;
 }
 
+.form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+.form-group-btn {
+    display: flex;
+    align-items: flex-end;
+}
+
+.edit-player-fields {
+    animation: fadeIn .2s ease;
+}
+
+.edit-player-fields .form-group {
+    margin-bottom: 12px;
+}
+
+.edit-player-fields .form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.edit-player-fields .form-group input,
+.edit-player-fields .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.edit-player-fields .form-group input:focus,
+.edit-player-fields .form-group select:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
 /* Remove Player */
 .admin-remove {
     display: flex;
@@ -2399,6 +2444,10 @@ body {
 
     .adjust-row {
         flex-wrap: wrap;
+    }
+
+    .form-row-3 {
+        grid-template-columns: 1fr;
     }
 }
 
