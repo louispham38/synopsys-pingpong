@@ -6,13 +6,13 @@
 // Firebase Configuration
 // ============================================================
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyD3qYMXCb9mTMTd0LtQ5mtcgQK_s_lsfWo",
+    authDomain: "synopsys-pingpong.firebaseapp.com",
+    databaseURL: "https://synopsys-pingpong-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "synopsys-pingpong",
+    storageBucket: "synopsys-pingpong.firebasestorage.app",
+    messagingSenderId: "688331109800",
+    appId: "1:688331109800:web:79c4a3162c1c3a3e42999d"
 };
 
 let db = null;
