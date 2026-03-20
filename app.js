@@ -394,10 +394,55 @@ class UI {
 
         playerA.addEventListener('change', updatePreview);
         playerB.addEventListener('change', updatePreview);
-        document.querySelectorAll('#setsContainer .score-input').forEach(input => {
+
+        this.minSets = 3;
+        this.maxSets = 7;
+        this.currentSets = 0;
+        for (let i = 0; i < this.minSets; i++) this.addSetRow();
+        this.updateSetsUI();
+
+        document.getElementById('btnAddSet').addEventListener('click', () => {
+            if (this.currentSets < this.maxSets) { this.addSetRow(); this.updateSetsUI(); }
+        });
+        document.getElementById('btnRemoveSet').addEventListener('click', () => {
+            if (this.currentSets > this.minSets) { this.removeSetRow(); this.updateSetsUI(); }
+        });
+
+        document.getElementById('submitMatch').addEventListener('click', () => this.submitMatch());
+    }
+
+    addSetRow() {
+        this.currentSets++;
+        const container = document.getElementById('setsContainer');
+        const row = document.createElement('div');
+        row.className = 'set-row';
+        row.dataset.set = this.currentSets;
+        row.innerHTML = `
+            <span class="set-label">Set ${this.currentSets}</span>
+            <input type="number" class="score-input score-a" min="0" max="30" placeholder="0">
+            <span class="score-dash">-</span>
+            <input type="number" class="score-input score-b" min="0" max="30" placeholder="0">
+        `;
+        container.appendChild(row);
+        row.querySelectorAll('.score-input').forEach(input => {
             input.addEventListener('input', () => { this.updateMatchSummary(); this.validateMatchForm(); });
         });
-        document.getElementById('submitMatch').addEventListener('click', () => this.submitMatch());
+    }
+
+    removeSetRow() {
+        const container = document.getElementById('setsContainer');
+        if (container.lastElementChild) {
+            container.removeChild(container.lastElementChild);
+            this.currentSets--;
+            this.updateMatchSummary();
+            this.validateMatchForm();
+        }
+    }
+
+    updateSetsUI() {
+        document.getElementById('setsCount').textContent = `${this.currentSets} / ${this.maxSets} sets`;
+        document.getElementById('btnAddSet').disabled = this.currentSets >= this.maxSets;
+        document.getElementById('btnRemoveSet').disabled = this.currentSets <= this.minSets;
     }
 
     updateMatchHandicapBanner() {
@@ -795,7 +840,11 @@ class UI {
         document.getElementById('matchSummary').style.display = 'none';
         document.getElementById('matchHandicapBanner').style.display = 'none';
         document.getElementById('funHandicapSelect').style.display = 'none';
-        document.querySelectorAll('#setsContainer .score-input').forEach(i => i.value = '');
+        const setsContainer = document.getElementById('setsContainer');
+        setsContainer.innerHTML = '';
+        this.currentSets = 0;
+        for (let i = 0; i < this.minSets; i++) this.addSetRow();
+        this.updateSetsUI();
         document.querySelectorAll('#funHandicapSelect .fun-check input').forEach(cb => cb.checked = false);
         document.getElementById('submitMatch').disabled = true;
 

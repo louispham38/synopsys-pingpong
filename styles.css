@@ -747,6 +747,53 @@ body {
     min-width: 50px;
 }
 
+.sets-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.btn-set-action {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .2s;
+    font-family: inherit;
+}
+
+.btn-set-action:hover:not(:disabled) {
+    background: rgba(108, 60, 224, 0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-set-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-set-remove:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.sets-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+    font-weight: 600;
+}
+
 .score-input {
     width: 70px;
     padding: 10px;

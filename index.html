@@ -203,25 +203,11 @@
                         </div>
                         <div class="score-input-section">
                             <h3>Nhập Tỉ Số (Các Set)</h3>
-                            <div id="setsContainer" class="sets-container">
-                                <div class="set-row" data-set="1">
-                                    <span class="set-label">Set 1</span>
-                                    <input type="number" class="score-input score-a" min="0" max="30" placeholder="0">
-                                    <span class="score-dash">-</span>
-                                    <input type="number" class="score-input score-b" min="0" max="30" placeholder="0">
-                                </div>
-                                <div class="set-row" data-set="2">
-                                    <span class="set-label">Set 2</span>
-                                    <input type="number" class="score-input score-a" min="0" max="30" placeholder="0">
-                                    <span class="score-dash">-</span>
-                                    <input type="number" class="score-input score-b" min="0" max="30" placeholder="0">
-                                </div>
-                                <div class="set-row" data-set="3">
-                                    <span class="set-label">Set 3</span>
-                                    <input type="number" class="score-input score-a" min="0" max="30" placeholder="0">
-                                    <span class="score-dash">-</span>
-                                    <input type="number" class="score-input score-b" min="0" max="30" placeholder="0">
-                                </div>
+                            <div id="setsContainer" class="sets-container"></div>
+                            <div class="sets-actions">
+                                <button type="button" class="btn-set-action" id="btnAddSet"><i class="fas fa-plus"></i> Thêm Set</button>
+                                <button type="button" class="btn-set-action btn-set-remove" id="btnRemoveSet"><i class="fas fa-minus"></i> Bớt Set</button>
+                                <span class="sets-count" id="setsCount">3 / 7 sets</span>
                             </div>
                         </div>
                         <div class="match-date-section">
