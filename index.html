@@ -262,8 +262,40 @@
                 </div>
                 <div class="guide-layout">
                     <div class="guide-card guide-card-full">
-                        <div class="guide-card-header"><i class="fas fa-calculator"></i><h3>Cách Tính Điểm (ELO Rating)</h3></div>
+                        <div class="guide-card-header"><i class="fas fa-wand-magic-sparkles"></i><h3>Tính Kèo Chấp Nhanh</h3></div>
                         <div class="guide-card-body">
+                            <p>Chọn 2 tay vợt để xem kèo chấp gợi ý + chọn kèo vui:</p>
+                            <div class="handicap-calc">
+                                <div class="handicap-calc-inputs">
+                                    <select id="handicapPlayerA" class="player-select"><option value="">-- Chọn tay vợt 1 --</option></select>
+                                    <div class="vs-badge-sm"><span>VS</span></div>
+                                    <select id="handicapPlayerB" class="player-select"><option value="">-- Chọn tay vợt 2 --</option></select>
+                                </div>
+                                <div id="handicapResult" class="handicap-result" style="display:none;"></div>
+                                <div id="guideFunSelect" class="fun-handicap-select" style="display:none;">
+                                    <h3><i class="fas fa-face-laugh-squint"></i> Thêm Kèo Vui Cho Trận Này</h3>
+                                    <div class="fun-check-list" id="guideFunCheckList">
+                                        <label class="fun-check"><input type="checkbox" value="tay-trai"> 🤚 Tay Trái</label>
+                                        <label class="fun-check"><input type="checkbox" value="vot-ngan"> 🏓 Vợt Ngắn</label>
+                                        <label class="fun-check"><input type="checkbox" value="nua-ban"> 🎯 Nửa Bàn</label>
+                                        <label class="fun-check"><input type="checkbox" value="doi-vot"> 🔄 Đổi Vợt</label>
+                                        <label class="fun-check"><input type="checkbox" value="1-vs-2"> 👥 1 vs 2</label>
+                                        <label class="fun-check"><input type="checkbox" value="1-mat"> 🏓 Chỉ 1 Mặt (FH/BH)</label>
+                                        <label class="fun-check"><input type="checkbox" value="khong-xoay"> 🚫 Không Xoáy Ngang</label>
+                                        <label class="fun-check"><input type="checkbox" value="friday-night"> 🍺 Friday Night</label>
+                                        <label class="fun-check"><input type="checkbox" value="plank"> 💪 Plank</label>
+                                    </div>
+                                    <button class="btn-announce" id="btnAnnounce"><i class="fas fa-bullhorn"></i> Thông Báo Trận Đấu</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="guide-card guide-card-full">
+                        <div class="guide-card-header collapsible" id="eloToggle">
+                            <div class="header-left"><i class="fas fa-calculator"></i><h3>Cách Tính Điểm (ELO Rating)</h3></div>
+                            <button class="btn-collapse" aria-label="Thu gọn"><i class="fas fa-chevron-down"></i></button>
+                        </div>
+                        <div class="guide-card-body collapsible-body" id="eloBody" style="display:none;">
                             <p>Hệ thống sử dụng <strong>thuật toán ELO</strong> (giống hệ thống xếp hạng cờ vua quốc tế) để tính điểm. Ý tưởng: thắng người mạnh hơn → được nhiều điểm, thắng người yếu hơn → được ít điểm.</p>
 
                             <div class="elo-steps">
@@ -382,36 +414,6 @@
                         </div>
                     </div>
                     <div class="guide-card guide-card-full">
-                        <div class="guide-card-header"><i class="fas fa-wand-magic-sparkles"></i><h3>Tính Kèo Chấp Nhanh</h3></div>
-                        <div class="guide-card-body">
-                            <p>Chọn 2 tay vợt để xem kèo chấp gợi ý + chọn kèo vui:</p>
-                            <div class="handicap-calc">
-                                <div class="handicap-calc-inputs">
-                                    <select id="handicapPlayerA" class="player-select"><option value="">-- Chọn tay vợt 1 --</option></select>
-                                    <div class="vs-badge-sm"><span>VS</span></div>
-                                    <select id="handicapPlayerB" class="player-select"><option value="">-- Chọn tay vợt 2 --</option></select>
-                                </div>
-                                <div id="handicapResult" class="handicap-result" style="display:none;"></div>
-                                <!-- Fun handicap checkboxes for guide calc -->
-                                <div id="guideFunSelect" class="fun-handicap-select" style="display:none;">
-                                    <h3><i class="fas fa-face-laugh-squint"></i> Thêm Kèo Vui Cho Trận Này</h3>
-                                    <div class="fun-check-list" id="guideFunCheckList">
-                                        <label class="fun-check"><input type="checkbox" value="tay-trai"> 🤚 Tay Trái</label>
-                                        <label class="fun-check"><input type="checkbox" value="vot-ngan"> 🏓 Vợt Ngắn</label>
-                                        <label class="fun-check"><input type="checkbox" value="nua-ban"> 🎯 Nửa Bàn</label>
-                                        <label class="fun-check"><input type="checkbox" value="doi-vot"> 🔄 Đổi Vợt</label>
-                                        <label class="fun-check"><input type="checkbox" value="1-vs-2"> 👥 1 vs 2</label>
-                                        <label class="fun-check"><input type="checkbox" value="1-mat"> 🏓 Chỉ 1 Mặt (FH/BH)</label>
-                                        <label class="fun-check"><input type="checkbox" value="khong-xoay"> 🚫 Không Xoáy Ngang</label>
-                                        <label class="fun-check"><input type="checkbox" value="friday-night"> 🍺 Friday Night</label>
-                                        <label class="fun-check"><input type="checkbox" value="plank"> 💪 Plank</label>
-                                    </div>
-                                    <button class="btn-announce" id="btnAnnounce"><i class="fas fa-bullhorn"></i> Thông Báo Trận Đấu</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="guide-card guide-card-full">
                         <div class="guide-card-header"><i class="fas fa-face-laugh-squint"></i><h3>Kèo Chấp Vui Vẻ 🎉</h3></div>
                         <div class="guide-card-body">
                             <p>Ngoài kèo chấp điểm, anh em có thể thử các kèo vui sau:</p>
@@ -472,7 +474,9 @@
                                         <option value="Field">Field</option><option value="PV">PV</option><option value="PD">PD</option>
                                         <option value="SSG">SSG</option><option value="AE">AE</option><option value="IPG">IPG</option>
                                         <option value="CSG">CSG</option><option value="TPG">TPG</option>
+                                        <option value="__custom__">+ Nhóm mới...</option>
                                     </select>
+                                    <input type="text" id="addPlayerCustomGroup" class="custom-group-input" placeholder="Nhập tên nhóm mới" style="display:none;">
                                 </div>
                                 <div class="form-group"><label>Điểm khởi tạo</label><input type="number" id="addPlayerRating" value="500" min="100" max="2000"></div>
                             </div>

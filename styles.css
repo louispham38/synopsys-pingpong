@@ -1071,6 +1071,52 @@ body {
     font-weight: 700;
 }
 
+.guide-card-header.collapsible {
+    cursor: pointer;
+    user-select: none;
+    justify-content: space-between;
+    transition: background .2s;
+}
+
+.guide-card-header.collapsible:hover {
+    background: rgba(108, 60, 224, 0.1);
+}
+
+.guide-card-header.collapsible .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-collapse {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: transform .3s, background .2s;
+}
+
+.btn-collapse:hover {
+    background: rgba(108, 60, 224, 0.12);
+    color: var(--accent);
+}
+
+.guide-card-header.collapsible.open .btn-collapse {
+    transform: rotate(180deg);
+}
+
+.collapsible-body {
+    animation: slideDown .3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 2000px; }
+}
+
 .guide-card-body {
     padding: 24px;
 }
@@ -2460,6 +2506,11 @@ body {
 .admin-add-player .form-group select:focus {
     outline: none;
     border-color: var(--primary-light);
+}
+
+.custom-group-input {
+    margin-top: 8px;
+    animation: fadeIn .2s ease;
 }
 
 .form-row-2 {

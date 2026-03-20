@@ -444,6 +444,16 @@ class UI {
         const update = () => this.updateHandicapResult();
         hA.addEventListener('change', update);
         hB.addEventListener('change', update);
+
+        const eloToggle = document.getElementById('eloToggle');
+        const eloBody = document.getElementById('eloBody');
+        if (eloToggle && eloBody) {
+            eloToggle.addEventListener('click', () => {
+                const open = eloBody.style.display !== 'none';
+                eloBody.style.display = open ? 'none' : 'block';
+                eloToggle.classList.toggle('open', !open);
+            });
+        }
     }
 
     bindAdmin() {
@@ -485,9 +495,20 @@ class UI {
             this.showToast('Đã cập nhật thông tin!', 'success');
         });
 
+        const addGroupSelect = document.getElementById('addPlayerGroup');
+        const customGroupInput = document.getElementById('addPlayerCustomGroup');
+        addGroupSelect.addEventListener('change', () => {
+            customGroupInput.style.display = addGroupSelect.value === '__custom__' ? 'block' : 'none';
+            if (addGroupSelect.value === '__custom__') customGroupInput.focus();
+        });
+
         document.getElementById('btnAddPlayer').addEventListener('click', () => {
             const name = document.getElementById('addPlayerName').value.trim();
-            const group = document.getElementById('addPlayerGroup').value;
+            let group = addGroupSelect.value;
+            if (group === '__custom__') {
+                group = customGroupInput.value.trim();
+                if (!group) { this.showToast('Nhập tên nhóm mới!', 'error'); return; }
+            }
             const email = document.getElementById('addPlayerEmail').value.trim();
             const rating = parseInt(document.getElementById('addPlayerRating').value) || 500;
             if (!name) { this.showToast('Nhập tên tay vợt!', 'error'); return; }
@@ -495,6 +516,9 @@ class UI {
             document.getElementById('addPlayerName').value = '';
             document.getElementById('addPlayerEmail').value = '';
             document.getElementById('addPlayerRating').value = '500';
+            addGroupSelect.value = 'Field';
+            customGroupInput.value = '';
+            customGroupInput.style.display = 'none';
             this.populateSelects();
             this.render();
             this.showToast(`Đã thêm ${name}!`, 'success');
