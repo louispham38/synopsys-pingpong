@@ -183,7 +183,7 @@ class AppState {
 
     _initLocal() {
         const savedP = localStorage.getItem(STORAGE_PREFIX + 'players');
-        this.players = savedP ? JSON.parse(savedP) : INITIAL_PLAYERS.map(p => ({
+        this.players = savedP ? this._normalizePlayers(JSON.parse(savedP)) : INITIAL_PLAYERS.map(p => ({
             ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
         this.matches = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
@@ -199,7 +199,7 @@ class AppState {
         ]).then(([pSnap, mSnap]) => {
             const pData = pSnap.val();
             if (pData) {
-                this.players = Object.values(pData);
+                this.players = this._normalizePlayers(Object.values(pData));
             } else {
                 this.players = INITIAL_PLAYERS.map(p => ({
                     ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
@@ -212,7 +212,7 @@ class AppState {
 
             db.ref(DB_ROOT + '/players').on('value', snap => {
                 const d = snap.val();
-                if (d) this.players = Object.values(d);
+                if (d) this.players = this._normalizePlayers(Object.values(d));
                 this._debouncedSync();
             });
             db.ref(DB_ROOT + '/matches').on('value', snap => {
@@ -257,6 +257,20 @@ class AppState {
         } else {
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
         }
+    }
+
+    _normalizePlayer(p) {
+        p.wins = p.wins || 0;
+        p.losses = p.losses || 0;
+        p.recentResults = p.recentResults || [];
+        p.streak = p.streak || 0;
+        p.streakType = p.streakType || null;
+        p.initialRating = p.initialRating || p.rating;
+        return p;
+    }
+
+    _normalizePlayers(players) {
+        return players.map(p => this._normalizePlayer(p));
     }
 
     getPlayer(id) { return this.players.find(p => p.id === id); }
