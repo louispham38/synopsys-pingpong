@@ -194,28 +194,37 @@ class AppState {
 
     _initFirebase() {
         let pLoaded = false, mLoaded = false;
-        this._writeCount = 0;
+        this._debounceTimer = null;
         return new Promise(resolve => {
             db.ref(DB_ROOT + '/players').on('value', snap => {
-                if (this._writeCount > 0) return;
                 const data = snap.val();
                 if (data) {
                     this.players = Object.values(data);
                 } else if (!pLoaded) {
                     this._seedPlayers();
-                    return;
                 }
                 pLoaded = true;
-                if (pLoaded && mLoaded) { if (!this._ready) { this._ready = true; resolve(); } else if (this.onDataChange) this.onDataChange(); }
+                if (mLoaded) this._notifyReady(resolve);
             });
             db.ref(DB_ROOT + '/matches').on('value', snap => {
-                if (this._writeCount > 0) return;
                 const data = snap.val();
                 this.matches = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
                 mLoaded = true;
-                if (pLoaded && mLoaded) { if (!this._ready) { this._ready = true; resolve(); } else if (this.onDataChange) this.onDataChange(); }
+                if (pLoaded) this._notifyReady(resolve);
             });
         });
+    }
+
+    _notifyReady(resolve) {
+        if (!this._ready) {
+            this._ready = true;
+            resolve();
+            return;
+        }
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => {
+            if (this.onDataChange) this.onDataChange();
+        }, 300);
     }
 
     _seedPlayers() {
@@ -225,16 +234,14 @@ class AppState {
         this.players = players;
         const data = {};
         players.forEach(p => { data[p.id] = p; });
-        this._writeCount++;
-        db.ref(DB_ROOT + '/players').set(data).then(() => { this._writeCount--; });
+        db.ref(DB_ROOT + '/players').set(data);
     }
 
     savePlayers() {
         if (USE_FIREBASE) {
-            this._writeCount++;
             const data = {};
             this.players.forEach(p => { data[p.id] = p; });
-            db.ref(DB_ROOT + '/players').set(data).then(() => { this._writeCount--; });
+            db.ref(DB_ROOT + '/players').set(data);
         } else {
             localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
         }
@@ -242,10 +249,9 @@ class AppState {
 
     saveMatches() {
         if (USE_FIREBASE) {
-            this._writeCount++;
             const data = {};
             this.matches.forEach(m => { data[m.id] = m; });
-            db.ref(DB_ROOT + '/matches').set(data).then(() => { this._writeCount--; });
+            db.ref(DB_ROOT + '/matches').set(data);
         } else {
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
         }
@@ -374,8 +380,7 @@ class AppState {
         if (USE_FIREBASE) {
             this._seedPlayers();
             this.matches = [];
-            this._writeCount++;
-            db.ref(DB_ROOT + '/matches').set(null).then(() => { this._writeCount--; });
+            db.ref(DB_ROOT + '/matches').set(null);
         } else {
             localStorage.removeItem(STORAGE_PREFIX + 'players');
             localStorage.removeItem(STORAGE_PREFIX + 'matches');
