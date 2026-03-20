@@ -95,15 +95,14 @@ class Auth {
     }
 
     _initFirebase() {
-        return new Promise(resolve => {
+        return db.ref(DB_ROOT + '/users').once('value').then(snap => {
+            const data = snap.val();
+            this._users = data ? Object.values(data) : [];
+            this._ensureAdmin();
+            this._ready = true;
             db.ref(DB_ROOT + '/users').on('value', snap => {
-                const data = snap.val();
-                this._users = data ? Object.values(data) : [];
-                if (!this._users.find(u => u.username === 'admin')) {
-                    this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
-                    this._saveUsers();
-                }
-                if (!this._ready) { this._ready = true; resolve(); }
+                const d = snap.val();
+                this._users = d ? Object.values(d) : [];
                 if (this._onUsersChange) this._onUsersChange();
             });
         });
@@ -193,55 +192,60 @@ class AppState {
     }
 
     _initFirebase() {
-        let pLoaded = false, mLoaded = false;
-        this._debounceTimer = null;
-        return new Promise(resolve => {
+        this._syncTimer = null;
+        return Promise.all([
+            db.ref(DB_ROOT + '/players').once('value'),
+            db.ref(DB_ROOT + '/matches').once('value')
+        ]).then(([pSnap, mSnap]) => {
+            const pData = pSnap.val();
+            if (pData) {
+                this.players = Object.values(pData);
+            } else {
+                this.players = INITIAL_PLAYERS.map(p => ({
+                    ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
+                }));
+                this._fbSavePlayers();
+            }
+            const mData = mSnap.val();
+            this.matches = mData ? Object.values(mData).sort((a, b) => b.id - a.id) : [];
+            this._ready = true;
+
             db.ref(DB_ROOT + '/players').on('value', snap => {
-                const data = snap.val();
-                if (data) {
-                    this.players = Object.values(data);
-                } else if (!pLoaded) {
-                    this._seedPlayers();
-                }
-                pLoaded = true;
-                if (mLoaded) this._notifyReady(resolve);
+                const d = snap.val();
+                if (d) this.players = Object.values(d);
+                this._debouncedSync();
             });
             db.ref(DB_ROOT + '/matches').on('value', snap => {
-                const data = snap.val();
-                this.matches = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
-                mLoaded = true;
-                if (pLoaded) this._notifyReady(resolve);
+                const d = snap.val();
+                this.matches = d ? Object.values(d).sort((a, b) => b.id - a.id) : [];
+                this._debouncedSync();
             });
         });
     }
 
-    _notifyReady(resolve) {
-        if (!this._ready) {
-            this._ready = true;
-            resolve();
-            return;
-        }
-        clearTimeout(this._debounceTimer);
-        this._debounceTimer = setTimeout(() => {
+    _debouncedSync() {
+        if (!this._ready) return;
+        clearTimeout(this._syncTimer);
+        this._syncTimer = setTimeout(() => {
             if (this.onDataChange) this.onDataChange();
-        }, 300);
+        }, 500);
     }
 
-    _seedPlayers() {
-        const players = INITIAL_PLAYERS.map(p => ({
-            ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
-        }));
-        this.players = players;
+    _fbSavePlayers() {
         const data = {};
-        players.forEach(p => { data[p.id] = p; });
-        db.ref(DB_ROOT + '/players').set(data);
+        this.players.forEach(p => { data[p.id] = p; });
+        db.ref(DB_ROOT + '/players').set(data).catch(e => console.error('Firebase savePlayers error:', e));
+    }
+
+    _fbSaveMatches() {
+        const data = {};
+        this.matches.forEach(m => { data[m.id] = m; });
+        db.ref(DB_ROOT + '/matches').set(data).catch(e => console.error('Firebase saveMatches error:', e));
     }
 
     savePlayers() {
         if (USE_FIREBASE) {
-            const data = {};
-            this.players.forEach(p => { data[p.id] = p; });
-            db.ref(DB_ROOT + '/players').set(data);
+            this._fbSavePlayers();
         } else {
             localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
         }
@@ -249,9 +253,7 @@ class AppState {
 
     saveMatches() {
         if (USE_FIREBASE) {
-            const data = {};
-            this.matches.forEach(m => { data[m.id] = m; });
-            db.ref(DB_ROOT + '/matches').set(data);
+            this._fbSaveMatches();
         } else {
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
         }
@@ -378,8 +380,11 @@ class AppState {
 
     resetData() {
         if (USE_FIREBASE) {
-            this._seedPlayers();
+            this.players = INITIAL_PLAYERS.map(p => ({
+                ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
+            }));
             this.matches = [];
+            this._fbSavePlayers();
             db.ref(DB_ROOT + '/matches').set(null);
         } else {
             localStorage.removeItem(STORAGE_PREFIX + 'players');
@@ -1174,5 +1179,8 @@ document.addEventListener('DOMContentLoaded', () => {
         auth._onUsersChange = () => {
             if (auth.isAdmin() && ui._initialized) ui.renderAdminUsers();
         };
+    }).catch(err => {
+        console.error('Init error:', err);
+        loading.innerHTML = '<div class="loading-content"><i class="fas fa-exclamation-triangle"></i><p>Lỗi kết nối Firebase. Thử tải lại trang.</p><p style="font-size:12px;color:#888;margin-top:8px;">' + err.message + '</p></div>';
     });
 });
