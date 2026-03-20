@@ -2090,6 +2090,33 @@ body {
     box-shadow: 0 0 20px rgba(108, 60, 224, 0.3);
 }
 
+.btn-guest {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.btn-guest:hover {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.guest-info {
+    text-align: center;
+    padding: 20px 16px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.guest-info i {
+    font-size: 36px;
+    color: #10b981;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.guest-info p {
+    font-size: 14px;
+}
+
 /* User Menu */
 .header-right {
     display: flex;
@@ -2692,6 +2719,92 @@ body {
 }
 
 .btn-delete-match:hover {
+    background: rgba(239, 68, 68, 0.25);
+    transform: scale(1.1);
+}
+
+/* Admin Users Table */
+.admin-users-mgmt {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.admin-users-table thead th {
+    background: var(--bg);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+}
+
+.admin-users-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.admin-users-table tbody td code {
+    background: rgba(108, 60, 224, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--accent);
+}
+
+.admin-users-table tbody td.date-col {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.admin-users-table tbody tr:hover {
+    background: rgba(108, 60, 224, 0.03);
+}
+
+.role-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.role-admin {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.role-user {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.btn-delete-user {
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 50%;
+    color: var(--danger);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.btn-delete-user:hover {
     background: rgba(239, 68, 68, 0.25);
     transform: scale(1.1);
 }

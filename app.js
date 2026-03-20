@@ -89,14 +89,27 @@ class Auth {
         return user;
     }
 
+    loginGuest() {
+        const guest = { username: '__guest__', displayName: 'Guest', role: 'guest' };
+        sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(guest));
+        return guest;
+    }
+
     register(username, password, displayName) {
         const users = this.getUsers();
         if (users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
-        const user = { username, password, displayName, role: 'user' };
+        const user = { username, password, displayName, role: 'user', registeredAt: new Date().toISOString() };
         users.push(user);
         this.saveUsers(users);
         sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
         return user;
+    }
+
+    deleteUser(username) {
+        if (username === 'admin') return false;
+        const users = this.getUsers().filter(u => u.username !== username);
+        this.saveUsers(users);
+        return true;
     }
 
     getSession() {
@@ -283,13 +296,18 @@ class UI {
 
     // --- Auth UI ---
     initAuth() {
+        const formMap = { guest: 'guestForm', login: 'loginForm', register: 'registerForm' };
         document.querySelectorAll('.auth-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
                 tab.classList.add('active');
-                document.getElementById(tab.dataset.auth === 'login' ? 'loginForm' : 'registerForm').classList.add('active');
+                document.getElementById(formMap[tab.dataset.auth]).classList.add('active');
             });
+        });
+
+        document.getElementById('btnGuest').addEventListener('click', () => {
+            this.enterApp(this.auth.loginGuest());
         });
 
         document.getElementById('loginForm').addEventListener('submit', e => {
@@ -593,6 +611,40 @@ class UI {
         });
 
         this.renderAdminHistory();
+        this.renderAdminUsers();
+    }
+
+    renderAdminUsers() {
+        const container = document.getElementById('adminUsersList');
+        if (!container) return;
+        const users = this.auth.getUsers();
+        if (!users.length) {
+            container.innerHTML = '<p class="admin-note">Chưa có tài khoản nào.</p>';
+            return;
+        }
+        const roleLabels = { admin: 'Admin', user: 'User' };
+        container.innerHTML = `
+            <table class="admin-users-table">
+                <thead><tr><th>Username</th><th>Tên hiển thị</th><th>Vai trò</th><th>Ngày ĐK</th><th></th></tr></thead>
+                <tbody>${users.map(u => `
+                    <tr>
+                        <td><code>${u.username}</code></td>
+                        <td>${u.displayName || '-'}</td>
+                        <td><span class="role-badge role-${u.role}">${roleLabels[u.role] || u.role}</span></td>
+                        <td class="date-col">${u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('vi-VN') : '-'}</td>
+                        <td>${u.username !== 'admin' ? `<button class="btn-delete-user" data-username="${u.username}" title="Xóa tài khoản"><i class="fas fa-trash"></i></button>` : ''}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+        container.querySelectorAll('.btn-delete-user').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                if (!confirm(`Xóa tài khoản "${username}"?`)) return;
+                this.auth.deleteUser(username);
+                this.renderAdminUsers();
+                this.showToast(`Đã xóa tài khoản ${username}`, 'info');
+            });
+        });
     }
 
     renderAdminHistory() {

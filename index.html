@@ -17,11 +17,20 @@
                 <h2>Synopsys Ping Pong VN07</h2>
             </div>
             <div class="auth-tabs">
-                <button class="auth-tab active" data-auth="login">Đăng Nhập</button>
+                <button class="auth-tab active" data-auth="guest">Khách</button>
+                <button class="auth-tab" data-auth="login">Đăng Nhập</button>
                 <button class="auth-tab" data-auth="register">Đăng Ký</button>
             </div>
+            <!-- Guest Form -->
+            <div id="guestForm" class="auth-form active">
+                <div class="guest-info">
+                    <i class="fas fa-eye"></i>
+                    <p>Xem bảng xếp hạng, lịch sử thi đấu và kèo chấp mà không cần đăng ký tài khoản.</p>
+                </div>
+                <button type="button" class="btn-auth btn-guest" id="btnGuest"><i class="fas fa-arrow-right-to-bracket"></i> Vào Xem (Guest)</button>
+            </div>
             <!-- Login Form -->
-            <form id="loginForm" class="auth-form active">
+            <form id="loginForm" class="auth-form">
                 <div class="form-group">
                     <label><i class="fas fa-user"></i> Tên đăng nhập</label>
                     <input type="text" id="loginUser" placeholder="Username" required autocomplete="username">
@@ -484,6 +493,13 @@
                         <h3><i class="fas fa-clock-rotate-left"></i> Quản Lý Lịch Sử Thi Đấu</h3>
                         <div class="admin-history-mgmt">
                             <div class="admin-history-list" id="adminHistoryList"></div>
+                        </div>
+                    </div>
+                    <!-- User Management -->
+                    <div class="admin-card admin-card-full">
+                        <h3><i class="fas fa-users-gear"></i> Quản Lý Tài Khoản Đăng Ký</h3>
+                        <div class="admin-users-mgmt">
+                            <div class="admin-users-list" id="adminUsersList"></div>
                         </div>
                     </div>
                     <!-- Reset All -->
