@@ -2,6 +2,27 @@
 // Synopsys Ping Pong VN07 Club - Ranking System
 // ============================================================
 
+// ============================================================
+// Firebase Configuration
+// ============================================================
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+let db = null;
+const USE_FIREBASE = typeof firebase !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('YOUR_');
+if (USE_FIREBASE) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+}
+const DB_ROOT = 'snps_pp';
+
 const INITIAL_PLAYERS = [
     { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", email: "thesu@synopsys.com",    rating: 800 },
     { id: 2,  name: "Do Nguyen Hoang Vu",    group: "Field", email: "hoangvu@synopsys.com",  rating: 820 },
@@ -57,33 +78,58 @@ const FORM_WINDOW = 5;
 const STORAGE_PREFIX = 'snps_pp_';
 
 // ============================================================
-// Auth System
+// Auth System (Firebase + localStorage fallback)
 // ============================================================
 class Auth {
     constructor() {
-        this.ensureAdmin();
+        this._users = [];
+        this._ready = !USE_FIREBASE;
+        this.readyPromise = USE_FIREBASE ? this._initFirebase() : this._initLocal();
     }
 
-    getUsers() {
-        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'users') || '[]');
+    _initLocal() {
+        this._users = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'users') || '[]');
+        this._ensureAdmin();
+        this._ready = true;
+        return Promise.resolve();
     }
 
-    saveUsers(users) {
-        localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(users));
+    _initFirebase() {
+        return new Promise(resolve => {
+            db.ref(DB_ROOT + '/users').on('value', snap => {
+                const data = snap.val();
+                this._users = data ? Object.values(data) : [];
+                if (!this._users.find(u => u.username === 'admin')) {
+                    this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
+                    this._saveUsers();
+                }
+                if (!this._ready) { this._ready = true; resolve(); }
+                if (this._onUsersChange) this._onUsersChange();
+            });
+        });
     }
 
-    ensureAdmin() {
-        const users = this.getUsers();
-        const admin = users.find(u => u.username === 'admin');
-        if (!admin) {
-            users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
-            this.saveUsers(users);
+    _ensureAdmin() {
+        if (!this._users.find(u => u.username === 'admin')) {
+            this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
+            this._saveUsers();
         }
     }
 
+    _saveUsers() {
+        if (USE_FIREBASE) {
+            const data = {};
+            this._users.forEach(u => { data[u.username] = u; });
+            db.ref(DB_ROOT + '/users').set(data);
+        } else {
+            localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
+        }
+    }
+
+    getUsers() { return this._users; }
+
     login(username, password) {
-        const users = this.getUsers();
-        const user = users.find(u => u.username === username && u.password === password);
+        const user = this._users.find(u => u.username === username && u.password === password);
         if (!user) return null;
         sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
         return user;
@@ -96,19 +142,18 @@ class Auth {
     }
 
     register(username, password, displayName) {
-        const users = this.getUsers();
-        if (users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
+        if (this._users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
         const user = { username, password, displayName, role: 'user', registeredAt: new Date().toISOString() };
-        users.push(user);
-        this.saveUsers(users);
+        this._users.push(user);
+        this._saveUsers();
         sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
         return user;
     }
 
     deleteUser(username) {
         if (username === 'admin') return false;
-        const users = this.getUsers().filter(u => u.username !== username);
-        this.saveUsers(users);
+        this._users = this._users.filter(u => u.username !== username);
+        this._saveUsers();
         return true;
     }
 
@@ -117,9 +162,7 @@ class Auth {
         return s ? JSON.parse(s) : null;
     }
 
-    logout() {
-        sessionStorage.removeItem(STORAGE_PREFIX + 'session');
-    }
+    logout() { sessionStorage.removeItem(STORAGE_PREFIX + 'session'); }
 
     isAdmin() {
         const s = this.getSession();
@@ -128,32 +171,76 @@ class Auth {
 }
 
 // ============================================================
-// State Management
+// State Management (Firebase + localStorage fallback)
 // ============================================================
 class AppState {
     constructor() {
-        this.players = this.loadPlayers();
-        this.matches = this.loadMatches();
+        this.players = [];
+        this.matches = [];
+        this._ready = false;
+        this.onDataChange = null;
+        this.readyPromise = USE_FIREBASE ? this._initFirebase() : this._initLocal();
     }
 
-    loadPlayers() {
-        const saved = localStorage.getItem(STORAGE_PREFIX + 'players');
-        if (saved) return JSON.parse(saved);
-        return INITIAL_PLAYERS.map(p => ({
+    _initLocal() {
+        const savedP = localStorage.getItem(STORAGE_PREFIX + 'players');
+        this.players = savedP ? JSON.parse(savedP) : INITIAL_PLAYERS.map(p => ({
             ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
+        this.matches = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
+        this._ready = true;
+        return Promise.resolve();
     }
 
-    loadMatches() {
-        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
+    _initFirebase() {
+        let pLoaded = false, mLoaded = false;
+        return new Promise(resolve => {
+            db.ref(DB_ROOT + '/players').on('value', snap => {
+                const data = snap.val();
+                if (data) {
+                    this.players = Object.values(data);
+                } else if (!pLoaded) {
+                    this._seedPlayers();
+                    return;
+                }
+                pLoaded = true;
+                if (pLoaded && mLoaded) { if (!this._ready) { this._ready = true; resolve(); } else if (this.onDataChange) this.onDataChange(); }
+            });
+            db.ref(DB_ROOT + '/matches').on('value', snap => {
+                const data = snap.val();
+                this.matches = data ? Object.values(data).sort((a, b) => b.id - a.id) : [];
+                mLoaded = true;
+                if (pLoaded && mLoaded) { if (!this._ready) { this._ready = true; resolve(); } else if (this.onDataChange) this.onDataChange(); }
+            });
+        });
+    }
+
+    _seedPlayers() {
+        const data = {};
+        INITIAL_PLAYERS.forEach(p => {
+            data[p.id] = { ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating };
+        });
+        db.ref(DB_ROOT + '/players').set(data);
     }
 
     savePlayers() {
-        localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
+        if (USE_FIREBASE) {
+            const data = {};
+            this.players.forEach(p => { data[p.id] = p; });
+            db.ref(DB_ROOT + '/players').set(data);
+        } else {
+            localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
+        }
     }
 
     saveMatches() {
-        localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        if (USE_FIREBASE) {
+            const data = {};
+            this.matches.forEach(m => { data[m.id] = m; });
+            db.ref(DB_ROOT + '/matches').set(data);
+        } else {
+            localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        }
     }
 
     getPlayer(id) { return this.players.find(p => p.id === id); }
@@ -276,10 +363,17 @@ class AppState {
     }
 
     resetData() {
-        localStorage.removeItem(STORAGE_PREFIX + 'players');
-        localStorage.removeItem(STORAGE_PREFIX + 'matches');
-        this.players = this.loadPlayers();
-        this.matches = this.loadMatches();
+        if (USE_FIREBASE) {
+            this._seedPlayers();
+            db.ref(DB_ROOT + '/matches').set(null);
+        } else {
+            localStorage.removeItem(STORAGE_PREFIX + 'players');
+            localStorage.removeItem(STORAGE_PREFIX + 'matches');
+            this.players = INITIAL_PLAYERS.map(p => ({
+                ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
+            }));
+            this.matches = [];
+        }
     }
 }
 
@@ -1042,7 +1136,28 @@ class UI {
 // Initialize
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    const loading = document.getElementById('loadingOverlay');
+    if (!USE_FIREBASE) loading.style.display = 'none';
+
     const auth = new Auth();
     const state = new AppState();
-    new UI(state, auth);
+
+    Promise.all([auth.readyPromise, state.readyPromise]).then(() => {
+        loading.style.display = 'none';
+        const ui = new UI(state, auth);
+        ui._initialized = true;
+
+        state.onDataChange = () => {
+            ui.populateSelects();
+            ui.render();
+            if (auth.isAdmin()) {
+                ui.renderAdminHistory();
+                ui.renderAdminUsers();
+            }
+        };
+
+        auth._onUsersChange = () => {
+            if (auth.isAdmin() && ui._initialized) ui.renderAdminUsers();
+        };
+    });
 });
