@@ -2,26 +2,7 @@
 // Synopsys Ping Pong VN07 Club - Ranking System
 // ============================================================
 
-// ============================================================
-// Firebase Configuration
-// ============================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyD3qYMXCb9mTMTd0LtQ5mtcgQK_s_lsfWo",
-    authDomain: "synopsys-pingpong.firebaseapp.com",
-    databaseURL: "https://synopsys-pingpong-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "synopsys-pingpong",
-    storageBucket: "synopsys-pingpong.firebasestorage.app",
-    messagingSenderId: "688331109800",
-    appId: "1:688331109800:web:79c4a3162c1c3a3e42999d"
-};
-
-let db = null;
-const USE_FIREBASE = typeof firebase !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('YOUR_');
-if (USE_FIREBASE) {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-}
-const DB_ROOT = 'snps_pp';
+const USE_FIREBASE = false;
 
 const INITIAL_PLAYERS = [
     { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", email: "thesu@synopsys.com",    rating: 800 },
@@ -1170,31 +1151,8 @@ class UI {
 // Initialize
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const loading = document.getElementById('loadingOverlay');
-    if (!USE_FIREBASE) loading.style.display = 'none';
-
+    document.getElementById('loadingOverlay').style.display = 'none';
     const auth = new Auth();
     const state = new AppState();
-
-    Promise.all([auth.readyPromise, state.readyPromise]).then(() => {
-        loading.style.display = 'none';
-        const ui = new UI(state, auth);
-        ui._initialized = true;
-
-        state.onDataChange = () => {
-            ui.populateSelects();
-            ui.render();
-            if (auth.isAdmin()) {
-                ui.renderAdminHistory();
-                ui.renderAdminUsers();
-            }
-        };
-
-        auth._onUsersChange = () => {
-            if (auth.isAdmin() && ui._initialized) ui.renderAdminUsers();
-        };
-    }).catch(err => {
-        console.error('Init error:', err);
-        loading.innerHTML = '<div class="loading-content"><i class="fas fa-exclamation-triangle"></i><p>Lỗi kết nối Firebase. Thử tải lại trang.</p><p style="font-size:12px;color:#888;margin-top:8px;">' + err.message + '</p></div>';
-    });
+    new UI(state, auth);
 });
