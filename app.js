@@ -3,7 +3,61 @@
 // ============================================================
 
 // ============================================================
-// Configuration
+// Google Sheets Sync Configuration
+// ============================================================
+// Paste your Google Apps Script Web App URL here after deployment:
+const SHEETS_API_URL = '';
+
+// ============================================================
+// Sync Manager — Google Sheets Backend
+// ============================================================
+class SyncManager {
+    constructor() {
+        this.apiUrl = SHEETS_API_URL;
+        this.enabled = !!this.apiUrl;
+        this._saving = false;
+        this._pendingSave = null;
+    }
+
+    async fetchAll() {
+        if (!this.enabled) return null;
+        try {
+            const res = await fetch(this.apiUrl);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } catch (e) {
+            console.warn('Sync fetch failed:', e);
+            return null;
+        }
+    }
+
+    async save(data) {
+        if (!this.enabled) return;
+        this._pendingSave = data;
+        if (this._saving) return;
+        this._saving = true;
+        try {
+            while (this._pendingSave) {
+                const payload = this._pendingSave;
+                this._pendingSave = null;
+                await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload),
+                });
+            }
+        } catch (e) {
+            console.warn('Sync save failed:', e);
+        } finally {
+            this._saving = false;
+        }
+    }
+}
+
+const sync = new SyncManager();
+
+// ============================================================
+// Player & Match Configuration
 // ============================================================
 
 const INITIAL_PLAYERS = [
@@ -69,6 +123,14 @@ class Auth {
         this._ensureAdmin();
     }
 
+    loadFromCloud(users) {
+        if (Array.isArray(users) && users.length) {
+            this._users = users;
+            localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
+            this._ensureAdmin();
+        }
+    }
+
     _ensureAdmin() {
         if (!this._users.find(u => u.username === 'admin')) {
             this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
@@ -78,6 +140,7 @@ class Auth {
 
     _saveUsers() {
         localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
+        sync.save({ users: this._users });
     }
 
     getUsers() { return this._users; }
@@ -136,12 +199,32 @@ class AppState {
         this.matches = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
     }
 
+    loadFromCloud(data) {
+        if (data.players && Array.isArray(data.players) && data.players.length) {
+            this.players = this._normalizePlayers(data.players);
+            localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
+        }
+        if (data.matches && Array.isArray(data.matches)) {
+            this.matches = data.matches.sort((a, b) => b.id - a.id);
+            localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        }
+    }
+
     savePlayers() {
         localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
+        this._syncToCloud();
     }
 
     saveMatches() {
         localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        this._syncToCloud();
+    }
+
+    _syncToCloud() {
+        clearTimeout(this._syncTimer);
+        this._syncTimer = setTimeout(() => {
+            sync.save({ players: this.players, matches: this.matches });
+        }, 300);
     }
 
     _normalizePlayer(p) {
@@ -278,12 +361,13 @@ class AppState {
     }
 
     resetData() {
-        localStorage.removeItem(STORAGE_PREFIX + 'players');
-        localStorage.removeItem(STORAGE_PREFIX + 'matches');
         this.players = INITIAL_PLAYERS.map(p => ({
             ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
         this.matches = [];
+        localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
+        localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        sync.save({ players: this.players, matches: this.matches });
     }
 }
 
@@ -1046,5 +1130,40 @@ class UI {
 // Initialize
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    new UI(new AppState(), new Auth());
+    const state = new AppState();
+    const auth = new Auth();
+    const ui = new UI(state, auth);
+
+    function refreshFromCloud() {
+        if (!sync.enabled) return Promise.resolve();
+        const indicator = document.getElementById('syncIndicator');
+        if (indicator) indicator.classList.add('syncing');
+        return sync.fetchAll().then(data => {
+            if (!data) return;
+            state.loadFromCloud(data);
+            auth.loadFromCloud(data.users);
+            ui.populateSelects();
+            ui.render();
+            if (auth.isAdmin()) {
+                ui.renderAdminHistory();
+                ui.renderAdminUsers();
+            }
+        }).finally(() => {
+            if (indicator) indicator.classList.remove('syncing');
+        });
+    }
+
+    refreshFromCloud();
+
+    if (sync.enabled) {
+        setInterval(refreshFromCloud, 30000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refreshFromCloud();
+        });
+    }
+
+    const syncBtn = document.getElementById('btnSync');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => refreshFromCloud());
+    }
 });
