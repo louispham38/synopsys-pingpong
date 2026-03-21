@@ -6,7 +6,7 @@
 // Google Sheets Sync Configuration
 // ============================================================
 // Paste your Google Apps Script Web App URL here after deployment:
-const SHEETS_API_URL = '';
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw1cGWs7gJrljP-e2AbtnhW9DIhhU-SF13T28OEY5Ft0Njqfzo_A_alDc4yUuLP6US0/exec';
 
 // ============================================================
 // Sync Manager — Google Sheets Backend
@@ -22,11 +22,11 @@ class SyncManager {
     async fetchAll() {
         if (!this.enabled) return null;
         try {
-            const res = await fetch(this.apiUrl);
+            const res = await fetch(this.apiUrl + '?t=' + Date.now(), { redirect: 'follow' });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return await res.json();
         } catch (e) {
-            console.warn('Sync fetch failed:', e);
+            console.warn('[Sync] fetch failed:', e);
             return null;
         }
     }
@@ -40,14 +40,16 @@ class SyncManager {
             while (this._pendingSave) {
                 const payload = this._pendingSave;
                 this._pendingSave = null;
-                await fetch(this.apiUrl, {
+                const res = await fetch(this.apiUrl, {
                     method: 'POST',
+                    redirect: 'follow',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(payload),
                 });
+                if (!res.ok) console.warn('[Sync] save HTTP', res.status);
             }
         } catch (e) {
-            console.warn('Sync save failed:', e);
+            console.warn('[Sync] save failed:', e);
         } finally {
             this._saving = false;
         }
@@ -200,11 +202,12 @@ class AppState {
     }
 
     loadFromCloud(data) {
+        if (this._saveCooldown) return;
         if (data.players && Array.isArray(data.players) && data.players.length) {
             this.players = this._normalizePlayers(data.players);
             localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
         }
-        if (data.matches && Array.isArray(data.matches)) {
+        if (data.matches && Array.isArray(data.matches) && data.matches.length) {
             this.matches = data.matches.sort((a, b) => b.id - a.id);
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
         }
@@ -212,15 +215,18 @@ class AppState {
 
     savePlayers() {
         localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
-        this._syncToCloud();
+        this._pushToCloud();
     }
 
     saveMatches() {
         localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
-        this._syncToCloud();
+        this._pushToCloud();
     }
 
-    _syncToCloud() {
+    _pushToCloud() {
+        this._saveCooldown = true;
+        clearTimeout(this._cooldownTimer);
+        this._cooldownTimer = setTimeout(() => { this._saveCooldown = false; }, 8000);
         clearTimeout(this._syncTimer);
         this._syncTimer = setTimeout(() => {
             sync.save({ players: this.players, matches: this.matches });
@@ -365,9 +371,8 @@ class AppState {
             ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
         this.matches = [];
-        localStorage.setItem(STORAGE_PREFIX + 'players', JSON.stringify(this.players));
-        localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
-        sync.save({ players: this.players, matches: this.matches });
+        this.savePlayers();
+        this.saveMatches();
     }
 }
 
@@ -1135,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ui = new UI(state, auth);
 
     function refreshFromCloud() {
-        if (!sync.enabled) return Promise.resolve();
+        if (!sync.enabled || state._saveCooldown) return Promise.resolve();
         const indicator = document.getElementById('syncIndicator');
         if (indicator) indicator.classList.add('syncing');
         return sync.fetchAll().then(data => {
@@ -1153,9 +1158,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    refreshFromCloud();
-
     if (sync.enabled) {
+        sync.fetchAll().then(data => {
+            if (data) {
+                const cloudHasData = data.players && data.players.length;
+                const localHasData = state.players.length > 0;
+                if (cloudHasData) {
+                    state.loadFromCloud(data);
+                    auth.loadFromCloud(data.users);
+                } else if (localHasData) {
+                    sync.save({
+                        players: state.players,
+                        matches: state.matches,
+                        users: auth.getUsers(),
+                    });
+                }
+                ui.populateSelects();
+                ui.render();
+                if (auth.isAdmin()) {
+                    ui.renderAdminHistory();
+                    ui.renderAdminUsers();
+                }
+            }
+        });
         setInterval(refreshFromCloud, 30000);
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) refreshFromCloud();
@@ -1164,6 +1189,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const syncBtn = document.getElementById('btnSync');
     if (syncBtn) {
-        syncBtn.addEventListener('click', () => refreshFromCloud());
+        syncBtn.addEventListener('click', () => {
+            state._saveCooldown = false;
+            refreshFromCloud();
+        });
     }
 });
