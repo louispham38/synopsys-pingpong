@@ -204,6 +204,11 @@ class AppState {
     }
 
     loadFromCloud(data) {
+        if (data.chat && Array.isArray(data.chat)) {
+            this.chat = data.chat;
+            localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
+            if (this.onChatUpdate) this.onChatUpdate();
+        }
         if (this._saveCooldown) return;
         if (data.players && Array.isArray(data.players) && data.players.length) {
             this.players = this._normalizePlayers(data.players);
@@ -212,11 +217,6 @@ class AppState {
         if (data.matches && Array.isArray(data.matches) && data.matches.length) {
             this.matches = data.matches.sort((a, b) => b.id - a.id);
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
-        }
-        if (data.chat && Array.isArray(data.chat)) {
-            this.chat = data.chat;
-            localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
-            if (this.onChatUpdate) this.onChatUpdate();
         }
     }
 
@@ -1334,16 +1334,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sync.enabled) {
         sync.fetchAll().then(data => {
             if (data) {
-                const cloudHasData = data.players && data.players.length;
-                const localHasData = state.players.length > 0;
-                if (cloudHasData) {
-                    state.loadFromCloud(data);
-                    auth.loadFromCloud(data.users);
-                } else if (localHasData) {
+                state.loadFromCloud(data);
+                auth.loadFromCloud(data.users);
+                const cloudHasPlayers = data.players && data.players.length;
+                if (!cloudHasPlayers && state.players.length > 0) {
                     sync.save({
                         players: state.players,
                         matches: state.matches,
                         users: auth.getUsers(),
+                        chat: state.chat,
                     });
                 }
                 ui.populateSelects();
@@ -1354,7 +1353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        setInterval(refreshFromCloud, 30000);
+        setInterval(refreshFromCloud, 15000);
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) refreshFromCloud();
         });
