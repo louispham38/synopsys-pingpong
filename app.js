@@ -240,6 +240,7 @@ class AppState {
         p.streak = p.streak || 0;
         p.streakType = p.streakType || null;
         p.initialRating = p.initialRating || p.rating;
+        p.lastDelta = p.lastDelta || 0;
         return p;
     }
 
@@ -281,6 +282,7 @@ class AppState {
             p.recentResults = [];
             p.streak = 0;
             p.streakType = null;
+            p.lastDelta = 0;
         });
         this.matches = [];
         this.savePlayers();
@@ -340,6 +342,8 @@ class AppState {
 
         playerA.rating = Math.max(100, playerA.rating + ratingChange);
         playerB.rating = Math.max(100, playerB.rating - ratingChange);
+        playerA.lastDelta = ratingChange;
+        playerB.lastDelta = -ratingChange;
 
         if (winnerIsA) { playerA.wins++; playerB.losses++; playerA.recentResults.push('W'); playerB.recentResults.push('L'); }
         else { playerB.wins++; playerA.losses++; playerA.recentResults.push('L'); playerB.recentResults.push('W'); }
@@ -1044,7 +1048,7 @@ class UI {
             const rank = allSorted.findIndex(x => x.id === p.id) + 1;
             const form = this.getFormDots(p);
             const formLabel = this.getFormLabel(p);
-            const delta = p.rating - p.initialRating;
+            const delta = p.lastDelta || 0;
             const cls = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
             const total = p.wins + p.losses;
             const wr = total > 0 ? Math.round(p.wins / total * 100) : 0;
