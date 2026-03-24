@@ -254,6 +254,25 @@ class AppState {
 
     getGroups() { return [...new Set(this.players.map(p => p.group))].sort(); }
 
+    getAccumulatedStats(fromDate) {
+        const stats = {};
+        this.players.forEach(p => { stats[p.id] = { id: p.id, name: p.name, group: p.group, totalChange: 0, wins: 0, losses: 0, matches: 0 }; });
+        this.matches.forEach(m => {
+            if (m.date < fromDate) return;
+            if (stats[m.playerAId]) {
+                stats[m.playerAId].totalChange += m.ratingChangeA;
+                stats[m.playerAId].matches++;
+                if (m.winnerId === m.playerAId) stats[m.playerAId].wins++; else stats[m.playerAId].losses++;
+            }
+            if (stats[m.playerBId]) {
+                stats[m.playerBId].totalChange += m.ratingChangeB;
+                stats[m.playerBId].matches++;
+                if (m.winnerId === m.playerBId) stats[m.playerBId].wins++; else stats[m.playerBId].losses++;
+            }
+        });
+        return Object.values(stats).filter(s => s.matches > 0).sort((a, b) => b.totalChange - a.totalChange);
+    }
+
     calculateElo(ratingA, ratingB, scoreA) {
         const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
         return Math.round(K_FACTOR * (scoreA - expectedA));
@@ -1006,6 +1025,7 @@ class UI {
         this.renderTopPlayers();
         this.renderTable();
         this.renderHistory();
+        this.renderLeaderboards();
     }
 
     renderStats() {
@@ -1117,6 +1137,45 @@ class UI {
                 </div>
             </div>`;
         }).join('');
+    }
+
+    renderLeaderboards() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        const yearStart = `${year}-01-01`;
+        const monthNames = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+
+        const ml = document.getElementById('leaderMonthLabel');
+        const yl = document.getElementById('leaderYearLabel');
+        if (ml) ml.textContent = monthNames[month];
+        if (yl) yl.textContent = String(year);
+
+        this._renderLeaderboard('monthlyLeaderboard', this.state.getAccumulatedStats(monthStart));
+        this._renderLeaderboard('yearlyLeaderboard', this.state.getAccumulatedStats(yearStart));
+    }
+
+    _renderLeaderboard(containerId, stats) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        if (!stats.length) {
+            container.innerHTML = '<div class="lb-empty"><i class="fas fa-minus"></i> Chưa có dữ liệu</div>';
+            return;
+        }
+        container.innerHTML = `<table class="lb-table">
+            <thead><tr><th>#</th><th>Tay Vợt</th><th>Trận</th><th>W/L</th><th>Điểm tích lũy</th></tr></thead>
+            <tbody>${stats.map((s, i) => {
+                const cls = s.totalChange > 0 ? 'positive' : s.totalChange < 0 ? 'negative' : 'neutral';
+                const medal = i === 0 ? '<i class="fas fa-trophy" style="color:#ffd700"></i> ' : i === 1 ? '<i class="fas fa-medal" style="color:#c0c0c0"></i> ' : i === 2 ? '<i class="fas fa-award" style="color:#cd7f32"></i> ' : '';
+                return `<tr class="${i < 3 ? 'lb-top' : ''}">
+                    <td class="lb-rank">${medal}${i + 1}</td>
+                    <td class="lb-name">${s.name} <span class="lb-group">${s.group}</span></td>
+                    <td class="lb-matches">${s.matches}</td>
+                    <td class="lb-wl">${s.wins}W-${s.losses}L</td>
+                    <td class="lb-pts ${cls}">${s.totalChange > 0 ? '+' : ''}${s.totalChange}</td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
     }
 
     formatDate(d) {

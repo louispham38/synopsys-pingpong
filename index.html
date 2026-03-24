@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synopsys Ping Pong VN07 Club - Bảng Xếp Hạng</title>
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
@@ -173,6 +173,24 @@
                         </thead>
                         <tbody id="rankingBody"></tbody>
                     </table>
+                </div>
+
+                <!-- Monthly & Yearly Leaderboards -->
+                <div class="leaderboard-grid">
+                    <div class="leaderboard-card">
+                        <div class="leaderboard-header monthly">
+                            <i class="fas fa-calendar-days"></i>
+                            <h3>Tích Lũy Tháng <span id="leaderMonthLabel"></span></h3>
+                        </div>
+                        <div class="leaderboard-body" id="monthlyLeaderboard"></div>
+                    </div>
+                    <div class="leaderboard-card">
+                        <div class="leaderboard-header yearly">
+                            <i class="fas fa-calendar"></i>
+                            <h3>Tích Lũy Năm <span id="leaderYearLabel"></span></h3>
+                        </div>
+                        <div class="leaderboard-body" id="yearlyLeaderboard"></div>
+                    </div>
                 </div>
             </section>
 
@@ -532,6 +550,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>
