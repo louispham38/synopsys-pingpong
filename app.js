@@ -199,6 +199,8 @@ class AppState {
             ...p, wins: 0, losses: 0, recentResults: [], streak: 0, streakType: null, initialRating: p.rating,
         }));
         this.matches = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
+        this.chat = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'chat') || '[]');
+        this.onChatUpdate = null;
     }
 
     loadFromCloud(data) {
@@ -210,6 +212,11 @@ class AppState {
         if (data.matches && Array.isArray(data.matches) && data.matches.length) {
             this.matches = data.matches.sort((a, b) => b.id - a.id);
             localStorage.setItem(STORAGE_PREFIX + 'matches', JSON.stringify(this.matches));
+        }
+        if (data.chat && Array.isArray(data.chat)) {
+            this.chat = data.chat;
+            localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
+            if (this.onChatUpdate) this.onChatUpdate();
         }
     }
 
@@ -397,6 +404,29 @@ class AppState {
         this.savePlayers();
         this.saveMatches();
     }
+
+    sendChat(username, displayName, message, type) {
+        const MAX_MESSAGES = 200;
+        const msg = {
+            id: Date.now(),
+            username, displayName, message,
+            type: type || 'chat',
+            time: new Date().toISOString(),
+        };
+        this.chat.push(msg);
+        if (this.chat.length > MAX_MESSAGES) this.chat = this.chat.slice(-MAX_MESSAGES);
+        localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
+        sync.save({ chat: this.chat });
+        if (this.onChatUpdate) this.onChatUpdate();
+        return msg;
+    }
+
+    clearChat() {
+        this.chat = [];
+        localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
+        sync.save({ chat: this.chat });
+        if (this.onChatUpdate) this.onChatUpdate();
+    }
 }
 
 // ============================================================
@@ -477,6 +507,7 @@ class UI {
         this.bindMatchForm();
         this.bindHistory();
         this.bindHandicapCalc();
+        this.bindChat();
         this.bindAdmin();
         this.bindAnnounce();
         this.populateSelects();
@@ -615,6 +646,85 @@ class UI {
                 this.showToast('Đã xóa lịch sử, giữ nguyên điểm', 'info');
             }
         });
+    }
+
+    bindChat() {
+        const session = this.auth.getSession();
+        const isGuest = !session || session.role === 'guest';
+        const inputArea = document.getElementById('chatInputArea');
+        const loginPrompt = document.getElementById('chatLoginPrompt');
+        const chatInput = document.getElementById('chatInput');
+
+        if (isGuest) {
+            if (inputArea) inputArea.querySelector('.chat-input-row').style.display = 'none';
+            if (inputArea) inputArea.querySelector('.chat-quick-actions').style.display = 'none';
+            if (loginPrompt) loginPrompt.style.display = 'flex';
+        }
+
+        const sendMessage = () => {
+            if (isGuest) return;
+            const text = chatInput.value.trim();
+            if (!text) return;
+            this.state.sendChat(session.username, session.displayName, text, 'chat');
+            chatInput.value = '';
+            chatInput.focus();
+        };
+
+        document.getElementById('chatSendBtn').addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+        document.querySelectorAll('.chat-quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (isGuest) return;
+                this.state.sendChat(session.username, session.displayName, btn.dataset.msg, 'challenge');
+            });
+        });
+
+        const clearBtn = document.getElementById('btnClearChat');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Xóa tất cả tin nhắn?')) {
+                    this.state.clearChat();
+                    this.showToast('Đã xóa tin nhắn', 'info');
+                }
+            });
+        }
+
+        this.state.onChatUpdate = () => this.renderChat();
+        this.renderChat();
+    }
+
+    renderChat() {
+        const container = document.getElementById('chatMessages');
+        if (!container) return;
+        const messages = this.state.chat;
+        if (!messages.length) {
+            container.innerHTML = '<div class="chat-empty"><i class="fas fa-comments"></i><p>Chưa có tin nhắn. Hãy gửi lời thách đấu đầu tiên!</p></div>';
+            return;
+        }
+        const session = this.auth.getSession();
+        const myName = session ? session.username : '';
+        container.innerHTML = messages.map(m => {
+            const isMine = m.username === myName;
+            const isChallenge = m.type === 'challenge';
+            const time = new Date(m.time);
+            const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            return `<div class="chat-msg ${isMine ? 'chat-mine' : ''} ${isChallenge ? 'chat-challenge' : ''}">
+                <div class="chat-msg-header">
+                    <span class="chat-sender">${m.displayName}</span>
+                    <span class="chat-time">${dateStr} ${timeStr}</span>
+                </div>
+                <div class="chat-msg-body">${isChallenge ? '<i class="fas fa-table-tennis-paddle-ball"></i> ' : ''}${this._escapeHtml(m.message)}</div>
+            </div>`;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    _escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     bindHandicapCalc() {

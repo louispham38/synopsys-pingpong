@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synopsys Ping Pong VN07 Club - Bảng Xếp Hạng</title>
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
@@ -111,8 +111,11 @@
             <button class="tab-btn admin-only" data-tab="match" style="display:none;">
                 <i class="fas fa-table-tennis-paddle-ball"></i> Nhập Kết Quả
             </button>
+            <button class="tab-btn" data-tab="chat">
+                <i class="fas fa-comments"></i> Thách Đấu
+            </button>
             <button class="tab-btn" data-tab="history">
-                <i class="fas fa-clock-rotate-left"></i> Lịch Sử Thi Đấu
+                <i class="fas fa-clock-rotate-left"></i> Lịch Sử
             </button>
             <button class="tab-btn" data-tab="guide">
                 <i class="fas fa-book-open"></i> Hướng Dẫn & Kèo Chấp
@@ -252,6 +255,35 @@
                             <i class="fas fa-check-circle"></i> Lưu Kết Quả
                         </button>
                     </div>
+                </div>
+            </section>
+
+            <!-- CHAT / CHALLENGE TAB -->
+            <section id="tab-chat" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-comments"></i> Thách Đấu & Trò Chuyện</h2>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-empty"><i class="fas fa-comments"></i><p>Chưa có tin nhắn. Hãy gửi lời thách đấu đầu tiên!</p></div>
+                    </div>
+                    <div class="chat-input-area" id="chatInputArea">
+                        <div class="chat-quick-actions">
+                            <button class="chat-quick-btn" data-msg="Ai rảnh đánh 1 trận không? 🏓"><i class="fas fa-table-tennis-paddle-ball"></i> Thách đấu</button>
+                            <button class="chat-quick-btn" data-msg="Chiều nay 5h ai đánh không? ⏰"><i class="fas fa-clock"></i> Hẹn giờ</button>
+                            <button class="chat-quick-btn" data-msg="Mình sẵn sàng! 💪"><i class="fas fa-hand"></i> Sẵn sàng</button>
+                        </div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chatInput" class="chat-input" placeholder="Nhắn tin thách đấu..." maxlength="500" autocomplete="off">
+                            <button class="chat-send-btn" id="chatSendBtn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        <div class="chat-login-prompt" id="chatLoginPrompt" style="display:none;">
+                            <i class="fas fa-lock"></i> Đăng nhập hoặc đăng ký để gửi tin nhắn
+                        </div>
+                    </div>
+                    <button class="btn-clear-chat admin-only" id="btnClearChat" style="display:none;">
+                        <i class="fas fa-trash"></i> Xóa tất cả tin nhắn
+                    </button>
                 </div>
             </section>
 
@@ -550,6 +582,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>

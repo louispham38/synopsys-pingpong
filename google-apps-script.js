@@ -19,7 +19,8 @@ function doGet(e) {
     var response = {
       players: JSON.parse(sheet.getRange('A1').getValue() || '[]'),
       matches: JSON.parse(sheet.getRange('A2').getValue() || '[]'),
-      users:   JSON.parse(sheet.getRange('A3').getValue() || '[]')
+      users:   JSON.parse(sheet.getRange('A3').getValue() || '[]'),
+      chat:    JSON.parse(sheet.getRange('A4').getValue() || '[]')
     };
 
     return ContentService
@@ -47,6 +48,8 @@ function doPost(e) {
       sheet.getRange('A2').setValue(JSON.stringify(payload.matches));
     if (payload.users !== undefined)
       sheet.getRange('A3').setValue(JSON.stringify(payload.users));
+    if (payload.chat !== undefined)
+      sheet.getRange('A4').setValue(JSON.stringify(payload.chat));
 
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, timestamp: new Date().toISOString() }))
