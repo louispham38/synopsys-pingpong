@@ -135,9 +135,12 @@ class Auth {
 
     _ensureAdmin() {
         if (!this._users.find(u => u.username === 'admin')) {
-            this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin' });
+            this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin', reputation: 5 });
             this._saveUsers();
         }
+        this._users.forEach(u => {
+            if (u.reputation === undefined) u.reputation = 5;
+        });
     }
 
     _saveUsers() {
@@ -146,6 +149,7 @@ class Auth {
     }
 
     getUsers() { return this._users; }
+    getUser(username) { return this._users.find(u => u.username === username); }
 
     login(username, password) {
         const user = this._users.find(u => u.username === username && u.password === password);
@@ -160,13 +164,43 @@ class Auth {
         return guest;
     }
 
-    register(username, password, displayName) {
+    register(username, password, playerId, newPlayerData) {
         if (this._users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
-        const user = { username, password, displayName, role: 'user', registeredAt: new Date().toISOString() };
+        if (playerId && playerId !== '__new__') {
+            const taken = this._users.find(u => u.playerId === parseInt(playerId));
+            if (taken) return { error: `Tay vợt này đã được liên kết với tài khoản "${taken.username}"!` };
+        }
+        const displayName = newPlayerData ? newPlayerData.name : (this._getPlayerName ? this._getPlayerName(parseInt(playerId)) : username);
+        const user = {
+            username, password, displayName,
+            role: 'user',
+            reputation: 5,
+            playerId: playerId === '__new__' ? null : (playerId ? parseInt(playerId) : null),
+            registeredAt: new Date().toISOString(),
+        };
+        if (newPlayerData) user._pendingPlayer = newPlayerData;
         this._users.push(user);
         this._saveUsers();
         sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
         return user;
+    }
+
+    updateUser(username, updates) {
+        const user = this.getUser(username);
+        if (!user) return;
+        Object.assign(user, updates);
+        this._saveUsers();
+        const session = this.getSession();
+        if (session && session.username === username) {
+            sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
+        }
+    }
+
+    adjustReputation(username, delta) {
+        const user = this.getUser(username);
+        if (!user) return;
+        user.reputation = Math.max(0, Math.min(5, (user.reputation || 5) + delta));
+        this._saveUsers();
     }
 
     deleteUser(username) {
@@ -200,7 +234,9 @@ class AppState {
         }));
         this.matches = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'matches') || '[]');
         this.chat = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'chat') || '[]');
+        this.challenges = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'challenges') || '[]');
         this.onChatUpdate = null;
+        this.onChallengesUpdate = null;
     }
 
     loadFromCloud(data) {
@@ -208,6 +244,11 @@ class AppState {
             this.chat = data.chat;
             localStorage.setItem(STORAGE_PREFIX + 'chat', JSON.stringify(this.chat));
             if (this.onChatUpdate) this.onChatUpdate();
+        }
+        if (data.challenges && Array.isArray(data.challenges)) {
+            this.challenges = data.challenges;
+            localStorage.setItem(STORAGE_PREFIX + 'challenges', JSON.stringify(this.challenges));
+            if (this.onChallengesUpdate) this.onChallengesUpdate();
         }
         if (this._saveCooldown) return;
         if (data.players && Array.isArray(data.players) && data.players.length) {
@@ -427,6 +468,61 @@ class AppState {
         sync.save({ chat: this.chat });
         if (this.onChatUpdate) this.onChatUpdate();
     }
+
+    _saveChallenges() {
+        localStorage.setItem(STORAGE_PREFIX + 'challenges', JSON.stringify(this.challenges));
+        sync.save({ challenges: this.challenges });
+        if (this.onChallengesUpdate) this.onChallengesUpdate();
+    }
+
+    createChallenge(fromUser, toUser, fromPlayerId, toPlayerId) {
+        const pending = this.challenges.find(c =>
+            c.status === 'pending' && c.fromUser === fromUser && c.toUser === toUser
+        );
+        if (pending) return { error: 'Bạn đã gửi thách đấu cho người này rồi!' };
+        const ch = {
+            id: Date.now(), fromUser, toUser, fromPlayerId, toPlayerId,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+        this.challenges.push(ch);
+        this._saveChallenges();
+        return ch;
+    }
+
+    respondChallenge(challengeId, accept, auth) {
+        const ch = this.challenges.find(c => c.id === challengeId);
+        if (!ch || ch.status !== 'pending') return null;
+        ch.status = accept ? 'accepted' : 'declined';
+        ch.respondedAt = new Date().toISOString();
+        if (!accept) {
+            const declineCount = this.challenges.filter(c =>
+                c.toUser === ch.toUser && c.fromUser === ch.fromUser && c.status === 'declined'
+            ).length;
+            if (declineCount >= 3 && auth) {
+                auth.adjustReputation(ch.toUser, -0.5);
+            }
+        }
+        this._saveChallenges();
+        return ch;
+    }
+
+    completeChallenge(challengeId) {
+        const ch = this.challenges.find(c => c.id === challengeId);
+        if (!ch) return;
+        ch.status = 'completed';
+        this._saveChallenges();
+    }
+
+    getChallengesForUser(username) {
+        return this.challenges.filter(c =>
+            (c.fromUser === username || c.toUser === username) && c.status === 'pending'
+        );
+    }
+
+    getAcceptedChallenges() {
+        return this.challenges.filter(c => c.status === 'accepted');
+    }
 }
 
 // ============================================================
@@ -466,18 +562,51 @@ class UI {
             else document.getElementById('loginError').textContent = 'Sai tên đăng nhập hoặc mật khẩu!';
         });
 
+        const regPlayerSel = document.getElementById('regPlayerId');
+        const regNewFields = document.getElementById('regNewPlayerFields');
+        if (regPlayerSel) {
+            const sorted = this.state.getSortedPlayers();
+            const takenIds = this.auth.getUsers().filter(u => u.playerId).map(u => u.playerId);
+            sorted.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.rating} - ${p.group})`;
+                if (takenIds.includes(p.id)) { opt.disabled = true; opt.textContent += ' [đã có TK]'; }
+                regPlayerSel.appendChild(opt);
+            });
+            regPlayerSel.addEventListener('change', () => {
+                regNewFields.style.display = regPlayerSel.value === '__new__' ? 'flex' : 'none';
+            });
+        }
+        this.auth._getPlayerName = (id) => { const p = this.state.getPlayer(id); return p ? p.name : ''; };
+
         document.getElementById('registerForm').addEventListener('submit', e => {
             e.preventDefault();
             const pass = document.getElementById('regPass').value;
-            const confirm = document.getElementById('regPassConfirm').value;
-            if (pass !== confirm) { document.getElementById('regError').textContent = 'Mật khẩu xác nhận không khớp!'; return; }
+            const confirmPass = document.getElementById('regPassConfirm').value;
+            if (pass !== confirmPass) { document.getElementById('regError').textContent = 'Mật khẩu xác nhận không khớp!'; return; }
+            const playerId = regPlayerSel.value;
+            let newPlayerData = null;
+            if (playerId === '__new__') {
+                const name = document.getElementById('regPlayerName').value.trim();
+                const email = document.getElementById('regPlayerEmail').value.trim();
+                const group = document.getElementById('regPlayerGroup').value;
+                const rating = parseInt(document.getElementById('regPlayerRating').value) || 500;
+                if (!name) { document.getElementById('regError').textContent = 'Nhập tên tay vợt!'; return; }
+                newPlayerData = { name, email, group, rating: Math.max(400, Math.min(2000, rating)) };
+            } else if (!playerId) {
+                document.getElementById('regError').textContent = 'Chọn tay vợt hoặc tạo mới!'; return;
+            }
             const result = this.auth.register(
-                document.getElementById('regUser').value.trim(),
-                pass,
-                document.getElementById('regDisplayName').value.trim()
+                document.getElementById('regUser').value.trim(), pass, playerId, newPlayerData
             );
-            if (result.error) document.getElementById('regError').textContent = result.error;
-            else this.enterApp(result);
+            if (result.error) { document.getElementById('regError').textContent = result.error; return; }
+            if (newPlayerData) {
+                const p = this.state.addPlayer(newPlayerData.name, newPlayerData.group, newPlayerData.email, newPlayerData.rating);
+                this.auth.updateUser(result.username, { playerId: p.id, displayName: p.name });
+                delete result._pendingPlayer;
+            }
+            this.enterApp(result);
         });
 
         const session = this.auth.getSession();
@@ -489,8 +618,17 @@ class UI {
         document.getElementById('appMain').style.display = 'block';
         document.getElementById('userName').textContent = user.displayName;
 
+        const repEl = document.getElementById('userReputation');
+        if (repEl && user.role !== 'guest') {
+            const rep = user.reputation !== undefined ? user.reputation : 5;
+            repEl.innerHTML = this._renderStars(rep);
+            repEl.style.display = '';
+        }
+
         const isAdmin = user.role === 'admin';
+        const isUser = user.role === 'user';
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+        document.querySelectorAll('.user-only').forEach(el => el.style.display = (isAdmin || isUser) ? '' : 'none');
         if (isAdmin) document.getElementById('adminTag').style.display = '';
 
         document.getElementById('btnLogout').addEventListener('click', () => {
@@ -508,11 +646,23 @@ class UI {
         this.bindHistory();
         this.bindHandicapCalc();
         this.bindChat();
+        this.bindChallenges();
         this.bindAdmin();
         this.bindAnnounce();
         this.populateSelects();
         this.render();
         document.getElementById('matchDate').valueAsDate = new Date();
+    }
+
+    _renderStars(rep) {
+        const full = Math.floor(rep);
+        const half = rep % 1 >= 0.5 ? 1 : 0;
+        const empty = 5 - full - half;
+        return '<span class="stars">' +
+            '<i class="fas fa-star"></i>'.repeat(full) +
+            (half ? '<i class="fas fa-star-half-alt"></i>' : '') +
+            '<i class="far fa-star"></i>'.repeat(empty) +
+            '</span>';
     }
 
     bindTabs() {
@@ -727,6 +877,137 @@ class UI {
         return div.innerHTML;
     }
 
+    bindChallenges() {
+        const session = this.auth.getSession();
+        const container = document.getElementById('challengeSection');
+        if (!container) return;
+        if (!session || session.role === 'guest') {
+            container.innerHTML = '<p class="challenge-login-prompt"><i class="fas fa-lock"></i> Đăng nhập để sử dụng tính năng thách đấu.</p>';
+            return;
+        }
+
+        const createForm = document.getElementById('challengeCreateForm');
+        if (createForm) {
+            const select = document.getElementById('challengeTarget');
+            if (select) {
+                const users = this.auth.getUsers().filter(u => u.username !== session.username && u.username !== 'admin' && u.playerId);
+                users.forEach(u => {
+                    const player = this.state.getPlayer(u.playerId);
+                    const opt = document.createElement('option');
+                    opt.value = u.username;
+                    opt.textContent = `${u.displayName} (${player ? player.rating : '?'} pts)`;
+                    select.appendChild(opt);
+                });
+            }
+            createForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const targetUser = document.getElementById('challengeTarget').value;
+                if (!targetUser) return;
+                const myPlayer = session.playerId ? this.state.getPlayer(session.playerId) : null;
+                const targetAccount = this.auth.getUser(targetUser);
+                const targetPlayer = targetAccount && targetAccount.playerId ? this.state.getPlayer(targetAccount.playerId) : null;
+                const result = this.state.createChallenge(
+                    session.username, targetUser,
+                    myPlayer ? myPlayer.id : null,
+                    targetPlayer ? targetPlayer.id : null
+                );
+                if (result.error) this.showToast(result.error, 'error');
+                else {
+                    this.showToast(`Đã gửi thách đấu đến ${targetAccount.displayName}!`, 'success');
+                    this.state.sendChat(session.username, session.displayName,
+                        `thách đấu ${targetAccount.displayName}!`, 'challenge');
+                }
+            });
+        }
+
+        this.state.onChallengesUpdate = () => this.renderChallenges();
+        this.renderChallenges();
+    }
+
+    renderChallenges() {
+        const session = this.auth.getSession();
+        if (!session || session.role === 'guest') return;
+        const container = document.getElementById('challengeList');
+        if (!container) return;
+
+        const incoming = this.state.challenges.filter(c => c.toUser === session.username && c.status === 'pending');
+        const outgoing = this.state.challenges.filter(c => c.fromUser === session.username && c.status === 'pending');
+        const accepted = this.state.getAcceptedChallenges();
+
+        let html = '';
+        if (incoming.length) {
+            html += '<h4><i class="fas fa-inbox"></i> Lời thách đấu nhận được</h4>';
+            incoming.forEach(c => {
+                const fromAccount = this.auth.getUser(c.fromUser);
+                const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+                html += `<div class="challenge-card challenge-incoming">
+                    <div class="challenge-info">
+                        <strong>${fromAccount ? fromAccount.displayName : c.fromUser}</strong>
+                        ${fromPlayer ? `<span class="challenge-rating">${fromPlayer.rating} pts</span>` : ''}
+                        <span class="challenge-time">${new Date(c.createdAt).toLocaleString('vi-VN')}</span>
+                    </div>
+                    <div class="challenge-actions">
+                        <button class="btn-accept" data-id="${c.id}"><i class="fas fa-check"></i> Chấp Nhận</button>
+                        <button class="btn-decline" data-id="${c.id}"><i class="fas fa-times"></i> Từ Chối</button>
+                    </div>
+                </div>`;
+            });
+        }
+        if (outgoing.length) {
+            html += '<h4><i class="fas fa-paper-plane"></i> Đã gửi thách đấu</h4>';
+            outgoing.forEach(c => {
+                const toAccount = this.auth.getUser(c.toUser);
+                html += `<div class="challenge-card challenge-outgoing">
+                    <div class="challenge-info">
+                        <strong>${toAccount ? toAccount.displayName : c.toUser}</strong>
+                        <span class="challenge-time">${new Date(c.createdAt).toLocaleString('vi-VN')}</span>
+                        <span class="badge badge-pending">Chờ phản hồi</span>
+                    </div>
+                </div>`;
+            });
+        }
+        if (accepted.length) {
+            html += '<h4><i class="fas fa-handshake"></i> Đã chấp nhận (chờ Admin nhập điểm)</h4>';
+            accepted.forEach(c => {
+                const fromAcc = this.auth.getUser(c.fromUser);
+                const toAcc = this.auth.getUser(c.toUser);
+                html += `<div class="challenge-card challenge-accepted">
+                    <div class="challenge-info">
+                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong> vs
+                        <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
+                        <span class="challenge-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
+                        <span class="badge badge-accepted">Chờ nhập điểm</span>
+                    </div>
+                </div>`;
+            });
+        }
+        if (!html) html = '<div class="challenge-empty"><i class="fas fa-table-tennis-paddle-ball"></i><p>Chưa có lời thách đấu nào.</p></div>';
+        container.innerHTML = html;
+
+        container.querySelectorAll('.btn-accept').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.state.respondChallenge(parseInt(btn.dataset.id), true, this.auth);
+                this.showToast('Đã chấp nhận thách đấu!', 'success');
+                this.renderChallenges();
+            });
+        });
+        container.querySelectorAll('.btn-decline').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ch = this.state.challenges.find(c => c.id === parseInt(btn.dataset.id));
+                const declineCount = this.state.challenges.filter(c =>
+                    c.toUser === ch.toUser && c.fromUser === ch.fromUser && c.status === 'declined'
+                ).length;
+                let msg = 'Từ chối lời thách đấu?';
+                if (declineCount >= 2) msg += '\n\nCảnh báo: Từ chối lần thứ 3 sẽ bị trừ điểm uy tín!';
+                if (confirm(msg)) {
+                    this.state.respondChallenge(parseInt(btn.dataset.id), false, this.auth);
+                    this.showToast('Đã từ chối thách đấu.', 'info');
+                    this.renderChallenges();
+                }
+            });
+        });
+    }
+
     bindHandicapCalc() {
         const hA = document.getElementById('handicapPlayerA');
         const hB = document.getElementById('handicapPlayerB');
@@ -838,6 +1119,43 @@ class UI {
 
         this.renderAdminHistory();
         this.renderAdminUsers();
+        this.renderAdminChallenges();
+    }
+
+    renderAdminChallenges() {
+        const container = document.getElementById('adminChallengesList');
+        if (!container) return;
+        const accepted = this.state.getAcceptedChallenges();
+        if (!accepted.length) {
+            container.innerHTML = '<p class="admin-note">Không có thách đấu nào đang chờ nhập điểm.</p>';
+            return;
+        }
+        container.innerHTML = accepted.map(c => {
+            const fromAcc = this.auth.getUser(c.fromUser);
+            const toAcc = this.auth.getUser(c.toUser);
+            const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+            const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
+            return `<div class="admin-challenge-item">
+                <div class="achi-players">
+                    <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
+                    ${fromPlayer ? `<small>(${fromPlayer.name} - ${fromPlayer.rating})</small>` : ''}
+                    <span class="vs">VS</span>
+                    <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
+                    ${toPlayer ? `<small>(${toPlayer.name} - ${toPlayer.rating})</small>` : ''}
+                </div>
+                <div class="achi-meta">
+                    <span class="achi-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
+                    <button class="btn-complete-challenge" data-id="${c.id}"><i class="fas fa-check-double"></i> Đã nhập điểm</button>
+                </div>
+            </div>`;
+        }).join('');
+        container.querySelectorAll('.btn-complete-challenge').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.state.completeChallenge(parseInt(btn.dataset.id));
+                this.renderAdminChallenges();
+                this.showToast('Đã đánh dấu hoàn thành!', 'success');
+            });
+        });
     }
 
     renderAdminUsers() {
@@ -848,18 +1166,25 @@ class UI {
             container.innerHTML = '<p class="admin-note">Chưa có tài khoản nào.</p>';
             return;
         }
-        const roleLabels = { admin: 'Admin', user: 'User' };
+        const roleLabels = { admin: 'Admin', user: 'User', guest: 'Guest' };
         container.innerHTML = `
             <table class="admin-users-table">
-                <thead><tr><th>Username</th><th>Tên hiển thị</th><th>Vai trò</th><th>Ngày ĐK</th><th></th></tr></thead>
-                <tbody>${users.map(u => `
-                    <tr>
+                <thead><tr><th>Username</th><th>Tên hiển thị</th><th>Tay vợt</th><th>Uy tín</th><th>Vai trò</th><th>Ngày ĐK</th><th></th></tr></thead>
+                <tbody>${users.map(u => {
+                    const linked = u.playerId ? this.state.getPlayer(u.playerId) : null;
+                    return `<tr>
                         <td><code>${u.username}</code></td>
                         <td>${u.displayName || '-'}</td>
+                        <td>${linked ? `${linked.name} <small>(${linked.rating})</small>` : '<em class="text-muted">Chưa liên kết</em>'}</td>
+                        <td class="stars-col">${this._renderStars(u.reputation || 5)}</td>
                         <td><span class="role-badge role-${u.role}">${roleLabels[u.role] || u.role}</span></td>
                         <td class="date-col">${u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('vi-VN') : '-'}</td>
-                        <td>${u.username !== 'admin' ? `<button class="btn-delete-user" data-username="${u.username}" title="Xóa tài khoản"><i class="fas fa-trash"></i></button>` : ''}</td>
-                    </tr>`).join('')}
+                        <td class="actions-col">${u.username !== 'admin' ? `
+                            <button class="btn-edit-user" data-username="${u.username}" title="Chỉnh sửa"><i class="fas fa-pen"></i></button>
+                            <button class="btn-delete-user" data-username="${u.username}" title="Xóa"><i class="fas fa-trash"></i></button>
+                        ` : ''}</td>
+                    </tr>`;
+                }).join('')}
                 </tbody>
             </table>`;
         container.querySelectorAll('.btn-delete-user').forEach(btn => {
@@ -870,6 +1195,58 @@ class UI {
                 this.renderAdminUsers();
                 this.showToast(`Đã xóa tài khoản ${username}`, 'info');
             });
+        });
+        container.querySelectorAll('.btn-edit-user').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                const user = this.auth.getUser(username);
+                if (!user) return;
+                this._showEditUserModal(user);
+            });
+        });
+    }
+
+    _showEditUserModal(user) {
+        const players = this.state.getSortedPlayers();
+        const takenIds = this.auth.getUsers().filter(u => u.playerId && u.username !== user.username).map(u => u.playerId);
+        const playerOpts = players.map(p =>
+            `<option value="${p.id}" ${p.id === user.playerId ? 'selected' : ''} ${takenIds.includes(p.id) ? 'disabled' : ''}>` +
+            `${p.name} (${p.rating}) ${takenIds.includes(p.id) ? '[đã liên kết]' : ''}</option>`
+        ).join('');
+        const repVal = user.reputation !== undefined ? user.reputation : 5;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `<div class="modal-card" style="max-width:460px;">
+            <h3 style="margin-bottom:1rem;"><i class="fas fa-user-edit"></i> Chỉnh sửa: ${user.username}</h3>
+            <div class="form-group"><label>Tên hiển thị</label>
+                <input type="text" id="editUserDisplay" value="${user.displayName || ''}" class="form-input"></div>
+            <div class="form-group"><label>Liên kết tay vợt</label>
+                <select id="editUserPlayer" class="form-input">
+                    <option value="">-- Chưa liên kết --</option>${playerOpts}</select></div>
+            <div class="form-group"><label>Uy tín (0-5 sao)</label>
+                <input type="number" id="editUserRep" value="${repVal}" min="0" max="5" step="0.5" class="form-input"></div>
+            <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;">
+                <button class="btn-secondary" id="editUserCancel">Hủy</button>
+                <button class="btn-primary" id="editUserSave">Lưu</button></div>
+        </div>`;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#editUserCancel').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        modal.querySelector('#editUserSave').addEventListener('click', () => {
+            const displayName = modal.querySelector('#editUserDisplay').value.trim();
+            const playerId = modal.querySelector('#editUserPlayer').value;
+            const reputation = parseFloat(modal.querySelector('#editUserRep').value);
+            this.auth.updateUser(user.username, {
+                displayName: displayName || user.displayName,
+                playerId: playerId ? parseInt(playerId) : null,
+                reputation: Math.max(0, Math.min(5, reputation)),
+            });
+            modal.remove();
+            this.renderAdminUsers();
+            this.showToast(`Đã cập nhật tài khoản ${user.username}`, 'success');
         });
     }
 
@@ -1325,6 +1702,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (auth.isAdmin()) {
                 ui.renderAdminHistory();
                 ui.renderAdminUsers();
+                ui.renderAdminChallenges();
             }
         }).finally(() => {
             if (indicator) indicator.classList.remove('syncing');
@@ -1343,6 +1721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         matches: state.matches,
                         users: auth.getUsers(),
                         chat: state.chat,
+                        challenges: state.challenges,
                     });
                 }
                 ui.populateSelects();
@@ -1350,6 +1729,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (auth.isAdmin()) {
                     ui.renderAdminHistory();
                     ui.renderAdminUsers();
+                    ui.renderAdminChallenges();
                 }
             }
         });
