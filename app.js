@@ -507,6 +507,41 @@ class AppState {
         return ch;
     }
 
+    submitChallengeScore(challengeId, sets, submittedBy) {
+        const ch = this.challenges.find(c => c.id === challengeId);
+        if (!ch || (ch.status !== 'accepted' && ch.status !== 'score_submitted')) return null;
+        ch.status = 'score_submitted';
+        ch.sets = sets;
+        ch.submittedBy = submittedBy;
+        ch.submittedAt = new Date().toISOString();
+        this._saveChallenges();
+        return ch;
+    }
+
+    approveChallengeScore(challengeId) {
+        const ch = this.challenges.find(c => c.id === challengeId && c.status === 'score_submitted');
+        if (!ch || !ch.sets) return null;
+        const match = this.recordMatch(ch.fromPlayerId, ch.toPlayerId, ch.sets, ch.submittedAt.split('T')[0], []);
+        if (match) {
+            match.challengeId = ch.id;
+            ch.status = 'completed';
+            ch.matchId = match.id;
+            this._saveChallenges();
+        }
+        return match;
+    }
+
+    rejectChallengeScore(challengeId) {
+        const ch = this.challenges.find(c => c.id === challengeId && c.status === 'score_submitted');
+        if (!ch) return null;
+        ch.status = 'accepted';
+        delete ch.sets;
+        delete ch.submittedBy;
+        delete ch.submittedAt;
+        this._saveChallenges();
+        return ch;
+    }
+
     completeChallenge(challengeId) {
         const ch = this.challenges.find(c => c.id === challengeId);
         if (!ch) return;
@@ -522,6 +557,10 @@ class AppState {
 
     getAcceptedChallenges() {
         return this.challenges.filter(c => c.status === 'accepted');
+    }
+
+    getScoreSubmittedChallenges() {
+        return this.challenges.filter(c => c.status === 'score_submitted');
     }
 }
 
@@ -967,20 +1006,66 @@ class UI {
             });
         }
         if (accepted.length) {
-            html += '<h4><i class="fas fa-handshake"></i> Đã chấp nhận (chờ Admin nhập điểm)</h4>';
+            html += '<h4><i class="fas fa-handshake"></i> Đã chấp nhận - Nhập kết quả</h4>';
             accepted.forEach(c => {
                 const fromAcc = this.auth.getUser(c.fromUser);
                 const toAcc = this.auth.getUser(c.toUser);
+                const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+                const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
+                const canSubmit = session.username === c.fromUser || session.username === c.toUser || session.role === 'admin';
                 html += `<div class="challenge-card challenge-accepted">
                     <div class="challenge-info">
-                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong> vs
+                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
+                        ${fromPlayer ? `<small>(${fromPlayer.rating})</small>` : ''} vs
                         <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
-                        <span class="challenge-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
-                        <span class="badge badge-accepted">Chờ nhập điểm</span>
+                        ${toPlayer ? `<small>(${toPlayer.rating})</small>` : ''}
                     </div>
+                    ${canSubmit ? `<div class="challenge-score-form" data-id="${c.id}" data-a="${c.fromPlayerId}" data-b="${c.toPlayerId}">
+                        <div class="csf-header">
+                            <span class="csf-label">${fromPlayer ? fromPlayer.name : 'A'}</span>
+                            <span class="csf-vs">vs</span>
+                            <span class="csf-label">${toPlayer ? toPlayer.name : 'B'}</span>
+                        </div>
+                        <div class="csf-sets">
+                            ${[1,2,3].map(i => `<div class="csf-set">
+                                <span class="csf-set-label">Set ${i}</span>
+                                <input type="number" class="csf-score-a" min="0" max="30" placeholder="0">
+                                <span>-</span>
+                                <input type="number" class="csf-score-b" min="0" max="30" placeholder="0">
+                            </div>`).join('')}
+                        </div>
+                        <div class="csf-actions">
+                            <button class="btn-add-set" data-id="${c.id}" title="Thêm set"><i class="fas fa-plus"></i> Set</button>
+                            <button class="btn-submit-score" data-id="${c.id}"><i class="fas fa-paper-plane"></i> Gửi kết quả</button>
+                        </div>
+                    </div>` : `<span class="badge badge-accepted">Chờ nhập điểm</span>`}
                 </div>`;
             });
         }
+
+        const submitted = this.state.getScoreSubmittedChallenges().filter(c =>
+            c.fromUser === session.username || c.toUser === session.username || session.role === 'admin'
+        );
+        if (submitted.length) {
+            html += '<h4><i class="fas fa-clock"></i> Chờ Admin duyệt</h4>';
+            submitted.forEach(c => {
+                const fromAcc = this.auth.getUser(c.fromUser);
+                const toAcc = this.auth.getUser(c.toUser);
+                const setsStr = (c.sets || []).map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
+                let setsA = 0, setsB = 0;
+                (c.sets || []).forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
+                html += `<div class="challenge-card challenge-submitted">
+                    <div class="challenge-info">
+                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
+                        <span class="csf-result">${setsA}-${setsB}</span>
+                        <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
+                    </div>
+                    <div class="csf-detail">Sets: ${setsStr}</div>
+                    <span class="badge badge-submitted"><i class="fas fa-hourglass-half"></i> Chờ duyệt</span>
+                </div>`;
+            });
+        }
+
         if (!html) html = '<div class="challenge-empty"><i class="fas fa-table-tennis-paddle-ball"></i><p>Chưa có lời thách đấu nào.</p></div>';
         container.innerHTML = html;
 
@@ -1002,6 +1087,44 @@ class UI {
                 if (confirm(msg)) {
                     this.state.respondChallenge(parseInt(btn.dataset.id), false, this.auth);
                     this.showToast('Đã từ chối thách đấu.', 'info');
+                    this.renderChallenges();
+                }
+            });
+        });
+        container.querySelectorAll('.btn-add-set').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const form = container.querySelector(`.challenge-score-form[data-id="${btn.dataset.id}"]`);
+                const setsDiv = form.querySelector('.csf-sets');
+                const count = setsDiv.querySelectorAll('.csf-set').length;
+                if (count >= 7) { this.showToast('Tối đa 7 set!', 'info'); return; }
+                const setEl = document.createElement('div');
+                setEl.className = 'csf-set';
+                setEl.innerHTML = `<span class="csf-set-label">Set ${count + 1}</span>
+                    <input type="number" class="csf-score-a" min="0" max="30" placeholder="0">
+                    <span>-</span>
+                    <input type="number" class="csf-score-b" min="0" max="30" placeholder="0">
+                    <button class="csf-remove-set" title="Xóa"><i class="fas fa-times"></i></button>`;
+                setEl.querySelector('.csf-remove-set').addEventListener('click', () => { setEl.remove(); });
+                setsDiv.appendChild(setEl);
+            });
+        });
+        container.querySelectorAll('.btn-submit-score').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cId = parseInt(btn.dataset.id);
+                const form = container.querySelector(`.challenge-score-form[data-id="${cId}"]`);
+                const setEls = form.querySelectorAll('.csf-set');
+                const sets = [];
+                let valid = true;
+                setEls.forEach(el => {
+                    const a = parseInt(el.querySelector('.csf-score-a').value) || 0;
+                    const b = parseInt(el.querySelector('.csf-score-b').value) || 0;
+                    if (a === 0 && b === 0) { valid = false; }
+                    sets.push({ scoreA: a, scoreB: b });
+                });
+                if (!valid || sets.length < 1) { this.showToast('Nhập đầy đủ tỉ số các set!', 'error'); return; }
+                const result = this.state.submitChallengeScore(cId, sets, session.username);
+                if (result) {
+                    this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
                     this.renderChallenges();
                 }
             });
@@ -1125,35 +1248,94 @@ class UI {
     renderAdminChallenges() {
         const container = document.getElementById('adminChallengesList');
         if (!container) return;
+        const submitted = this.state.getScoreSubmittedChallenges();
         const accepted = this.state.getAcceptedChallenges();
-        if (!accepted.length) {
-            container.innerHTML = '<p class="admin-note">Không có thách đấu nào đang chờ nhập điểm.</p>';
+
+        if (!submitted.length && !accepted.length) {
+            container.innerHTML = '<p class="admin-note">Không có thách đấu nào đang chờ xử lý.</p>';
             return;
         }
-        container.innerHTML = accepted.map(c => {
-            const fromAcc = this.auth.getUser(c.fromUser);
-            const toAcc = this.auth.getUser(c.toUser);
-            const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
-            const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
-            return `<div class="admin-challenge-item">
-                <div class="achi-players">
-                    <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
-                    ${fromPlayer ? `<small>(${fromPlayer.name} - ${fromPlayer.rating})</small>` : ''}
-                    <span class="vs">VS</span>
-                    <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
-                    ${toPlayer ? `<small>(${toPlayer.name} - ${toPlayer.rating})</small>` : ''}
-                </div>
-                <div class="achi-meta">
-                    <span class="achi-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
-                    <button class="btn-complete-challenge" data-id="${c.id}"><i class="fas fa-check-double"></i> Đã nhập điểm</button>
-                </div>
-            </div>`;
-        }).join('');
-        container.querySelectorAll('.btn-complete-challenge').forEach(btn => {
+
+        let html = '';
+        if (submitted.length) {
+            html += '<h4 class="admin-section-label"><i class="fas fa-clipboard-check"></i> Chờ duyệt kết quả</h4>';
+            html += submitted.map(c => {
+                const fromAcc = this.auth.getUser(c.fromUser);
+                const toAcc = this.auth.getUser(c.toUser);
+                const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+                const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
+                const submitter = this.auth.getUser(c.submittedBy);
+                const setsStr = (c.sets || []).map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
+                let setsA = 0, setsB = 0;
+                (c.sets || []).forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
+                return `<div class="admin-challenge-item achi-review">
+                    <div class="achi-players">
+                        <strong>${fromPlayer ? fromPlayer.name : (fromAcc ? fromAcc.displayName : c.fromUser)}</strong>
+                        ${fromPlayer ? `<small>(${fromPlayer.rating})</small>` : ''}
+                        <span class="achi-score-big">${setsA} - ${setsB}</span>
+                        <strong>${toPlayer ? toPlayer.name : (toAcc ? toAcc.displayName : c.toUser)}</strong>
+                        ${toPlayer ? `<small>(${toPlayer.rating})</small>` : ''}
+                    </div>
+                    <div class="achi-detail">
+                        <span>Sets: ${setsStr}</span>
+                        <span class="achi-submitter">Gửi bởi: <strong>${submitter ? submitter.displayName : c.submittedBy}</strong></span>
+                        <span class="achi-time">${new Date(c.submittedAt).toLocaleString('vi-VN')}</span>
+                    </div>
+                    <div class="achi-review-actions">
+                        <button class="btn-approve-score" data-id="${c.id}"><i class="fas fa-check-circle"></i> Duyệt & Ghi nhận</button>
+                        <button class="btn-reject-score" data-id="${c.id}"><i class="fas fa-redo"></i> Trả lại</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        if (accepted.length) {
+            html += '<h4 class="admin-section-label"><i class="fas fa-hourglass-half"></i> Đã chấp nhận (chờ nhập điểm)</h4>';
+            html += accepted.map(c => {
+                const fromAcc = this.auth.getUser(c.fromUser);
+                const toAcc = this.auth.getUser(c.toUser);
+                const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+                const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
+                return `<div class="admin-challenge-item">
+                    <div class="achi-players">
+                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
+                        ${fromPlayer ? `<small>(${fromPlayer.name} - ${fromPlayer.rating})</small>` : ''}
+                        <span class="vs">VS</span>
+                        <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
+                        ${toPlayer ? `<small>(${toPlayer.name} - ${toPlayer.rating})</small>` : ''}
+                    </div>
+                    <div class="achi-meta">
+                        <span class="achi-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
+                        <span class="badge badge-accepted">Chờ user nhập điểm</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.btn-approve-score').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.state.completeChallenge(parseInt(btn.dataset.id));
+                const cId = parseInt(btn.dataset.id);
+                if (!confirm('Duyệt kết quả và ghi nhận vào bảng xếp hạng?')) return;
+                const match = this.state.approveChallengeScore(cId);
+                if (match) {
+                    this.render();
+                    this.renderAdminChallenges();
+                    this.renderAdminHistory();
+                    this.showToast('Đã duyệt và ghi nhận kết quả!', 'success');
+                } else {
+                    this.showToast('Lỗi: Không thể ghi nhận kết quả.', 'error');
+                }
+            });
+        });
+        container.querySelectorAll('.btn-reject-score').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cId = parseInt(btn.dataset.id);
+                if (!confirm('Trả kết quả lại cho user nhập lại?')) return;
+                this.state.rejectChallengeScore(cId);
                 this.renderAdminChallenges();
-                this.showToast('Đã đánh dấu hoàn thành!', 'success');
+                this.showToast('Đã trả lại, user có thể nhập lại kết quả.', 'info');
             });
         });
     }
