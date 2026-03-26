@@ -343,6 +343,34 @@ class AppState {
         return p;
     }
 
+    restoreEmails() {
+        const emailMap = {
+            1:'thesu@synopsys.com', 2:'hoangvu@synopsys.com', 3:'thiepham@synopsys.com',
+            4:'qhoang@synopsys.com', 5:'namn@synopsys.com', 6:'vanhuynh@synopsys.com',
+            7:'huyh@synopsys.com', 8:'lhuynh@synopsys.com', 9:'minguyen@synopsys.com',
+            10:'tubui@synopsys.com', 11:'phanvi@synopsys.com', 12:'phuqui@synopsys.com',
+            13:'nchong@synopsys.com', 14:'baonhung@synopsys.com', 15:'hluong@synopsys.com',
+            16:'thuc@synopsys.com', 17:'thiki@synopsys.com', 18:'ngoctien@synopsys.com',
+            19:'thaol@synopsys.com', 20:'dinhty@synopsys.com', 21:'paglu@synopsys.com',
+            22:'qvo@synopsys.com', 23:'ngochieu@synopsys.com', 24:'trngo@synopsys.com',
+            25:'qta@synopsys.com', 26:'nguyenj@synopsys.com', 27:'thanhl@synopsys.com',
+            28:'chaupham@synopsys.com', 29:'hoangtan@synopsys.com', 30:'hieuhanh@synopsys.com',
+            31:'ctruong@synopsys.com', 32:'thanhqui@synopsys.com', 33:'chitong@synopsys.com',
+            34:'chitong@synopsys.com', 35:'duchuyn@synopsys.com',
+        };
+        let fixed = 0;
+        this.players.forEach(p => {
+            if (emailMap[p.id] && (!p.email || p.email === '')) {
+                p.email = emailMap[p.id];
+                fixed++;
+            }
+        });
+        if (fixed > 0) {
+            this.savePlayers();
+            console.log(`[Restore] Đã khôi phục ${fixed} email.`);
+        }
+    }
+
     _normalizePlayers(players) {
         return players.map(p => this._normalizePlayer(p));
     }
@@ -1998,6 +2026,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data) {
                 state.loadFromCloud(data);
                 auth.loadFromCloud(data.users);
+                state.restoreEmails();
                 const cloudHasPlayers = data.players && data.players.length;
                 if (!cloudHasPlayers && state.players.length > 0) {
                     sync.save({
