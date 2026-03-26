@@ -3397,6 +3397,15 @@ body {
     border-left: none;
     border-right: 3px solid var(--accent);
 }
+.chat-msg.chat-result {
+    border-left: 3px solid var(--success);
+    background: rgba(16, 185, 129, 0.08);
+    align-self: center;
+    max-width: 95%;
+    text-align: center;
+}
+.chat-msg.chat-result .chat-sender { color: var(--success); }
+.chat-msg.chat-result .chat-msg-body i { color: var(--accent); }
 .chat-msg-header {
     display: flex;
     justify-content: space-between;

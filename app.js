@@ -1009,15 +1009,18 @@ class UI {
         container.innerHTML = messages.map(m => {
             const isMine = m.username === myName;
             const isChallenge = m.type === 'challenge';
+            const isResult = m.type === 'result';
             const time = new Date(m.time);
             const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
             const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-            return `<div class="chat-msg ${isMine ? 'chat-mine' : ''} ${isChallenge ? 'chat-challenge' : ''}">
+            const typeClass = isResult ? 'chat-result' : isChallenge ? 'chat-challenge' : '';
+            const icon = isResult ? '<i class="fas fa-trophy"></i> ' : isChallenge ? '<i class="fas fa-table-tennis-paddle-ball"></i> ' : '';
+            return `<div class="chat-msg ${isMine ? 'chat-mine' : ''} ${typeClass}">
                 <div class="chat-msg-header">
                     <span class="chat-sender">${m.displayName}</span>
                     <span class="chat-time">${dateStr} ${timeStr}</span>
                 </div>
-                <div class="chat-msg-body">${isChallenge ? '<i class="fas fa-table-tennis-paddle-ball"></i> ' : ''}${this._escapeHtml(m.message)}</div>
+                <div class="chat-msg-body">${icon}${this._escapeHtml(m.message)}</div>
             </div>`;
         }).join('');
         container.scrollTop = container.scrollHeight;
@@ -1441,8 +1444,18 @@ class UI {
             btn.addEventListener('click', () => {
                 const cId = parseInt(btn.dataset.id);
                 if (!confirm('Duyệt kết quả và ghi nhận vào bảng xếp hạng?')) return;
+                const ch = this.state.challenges.find(c => c.id === cId);
                 const match = this.state.approveChallengeScore(cId);
                 if (match) {
+                    const winner = match.winnerId === match.playerAId ? match.playerAName : match.playerBName;
+                    const loser = match.winnerId === match.playerAId ? match.playerBName : match.playerAName;
+                    const setsW = match.winnerId === match.playerAId ? match.setsWonA : match.setsWonB;
+                    const setsL = match.winnerId === match.playerAId ? match.setsWonB : match.setsWonA;
+                    const changeW = match.winnerId === match.playerAId ? match.ratingChangeA : match.ratingChangeB;
+                    const changeL = match.winnerId === match.playerAId ? match.ratingChangeB : match.ratingChangeA;
+                    this.state.sendChat('system', 'Admin',
+                        `${winner} thắng ${loser} (${setsW}-${setsL}) | ${winner} ${changeW > 0 ? '+' : ''}${changeW} pts, ${loser} ${changeL > 0 ? '+' : ''}${changeL} pts`,
+                        'result');
                     this.render();
                     this.renderAdminChallenges();
                     this.renderAdminHistory();
