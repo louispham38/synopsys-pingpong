@@ -1089,6 +1089,8 @@ class UI {
         if (!session || session.role === 'guest') return;
         const container = document.getElementById('challengeList');
         if (!container) return;
+        const section = document.getElementById('challengeSection');
+        if (section && section.querySelector('input:focus, select:focus')) return;
 
         const incoming = this.state.challenges.filter(c => c.toUser === session.username && c.status === 'pending');
         const outgoing = this.state.challenges.filter(c => c.fromUser === session.username && c.status === 'pending');
