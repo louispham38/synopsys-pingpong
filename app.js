@@ -63,41 +63,41 @@ const sync = new SyncManager();
 // ============================================================
 
 const INITIAL_PLAYERS = [
-    { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", email: "thesu@synopsys.com",    rating: 800 },
-    { id: 2,  name: "Do Nguyen Hoang Vu",    group: "Field", email: "hoangvu@synopsys.com",  rating: 820 },
-    { id: 3,  name: "Pham Thieu Khang",      group: "PV",    email: "thiepham@synopsys.com", rating: 990 },
-    { id: 4,  name: "Hoàng Quốc Khánh",      group: "PD",    email: "qhoang@synopsys.com",   rating: 700 },
-    { id: 5,  name: "Nam Nguyen",             group: "Field", email: "namn@synopsys.com",     rating: 770 },
-    { id: 6,  name: "Huynh Nguyen",           group: "SSG",   email: "vanhuynh@synopsys.com", rating: 760 },
-    { id: 7,  name: "Huy Hoang",              group: "SSG",   email: "huyh@synopsys.com",     rating: 770 },
-    { id: 8,  name: "Nghia Huynh",            group: "AE",    email: "lhuynh@synopsys.com",   rating: 600 },
-    { id: 9,  name: "Hùng Nguyễn",            group: "AE",    email: "minguyen@synopsys.com", rating: 500 },
-    { id: 10, name: "Tú Bùi",                 group: "AE",    email: "tubui@synopsys.com",    rating: 500 },
-    { id: 11, name: "Khang Nguyễn",           group: "AE",    email: "phanvi@synopsys.com",   rating: 750 },
-    { id: 12, name: "Phu-Qui Pham",           group: "AE",    email: "phuqui@synopsys.com",   rating: 400 },
-    { id: 13, name: "Chồng Nhật Cường",       group: "IPG",   email: "nchong@synopsys.com",   rating: 790 },
-    { id: 14, name: "Las Tran",               group: "AE",    email: "baonhung@synopsys.com", rating: 500 },
-    { id: 15, name: "Harry Luong",            group: "SSG",   email: "hluong@synopsys.com",   rating: 700 },
-    { id: 16, name: "Thuc Nguyen",            group: "CSG",   email: "thuc@synopsys.com",     rating: 650 },
-    { id: 17, name: "Khanh Nguyen",           group: "SSG",   email: "thiki@synopsys.com",    rating: 400 },
-    { id: 18, name: "Nguyen Ngoc Tien",       group: "CSG",   email: "ngoctien@synopsys.com", rating: 650 },
-    { id: 19, name: "Le Ngoc Thao",           group: "CSG",   email: "thaol@synopsys.com",    rating: 750 },
-    { id: 20, name: "Tyluke",                 group: "IPG",   email: "dinhty@synopsys.com",   rating: 760 },
-    { id: 21, name: "Kyrene Gay Paglumotan",  group: "TPG",   email: "paglu@synopsys.com",    rating: 650 },
-    { id: 22, name: "Võ Quang Thanh Nghĩa",   group: "Field", email: "qvo@synopsys.com",      rating: 600 },
-    { id: 23, name: "Vo Ngoc Hieu",           group: "SSG",   email: "ngochieu@synopsys.com", rating: 500 },
-    { id: 24, name: "Ngo Tran Viet Khai",     group: "SSG",   email: "trngo@synopsys.com",    rating: 500 },
-    { id: 25, name: "Thinh Ta",               group: "Field", email: "qta@synopsys.com",      rating: 790 },
-    { id: 26, name: "Nguyễn Kim Anh",         group: "Field", email: "nguyenj@synopsys.com",  rating: 600 },
-    { id: 27, name: "Trần Thanh Liêm",        group: "SSG",   email: "thanhl@synopsys.com",   rating: 500 },
-    { id: 28, name: "Châu Pham",              group: "CSG",   email: "chaupham@synopsys.com", rating: 400 },
-    { id: 29, name: "Tân Nguyễn",             group: "CSG",   email: "hoangtan@synopsys.com", rating: 500 },
-    { id: 30, name: "Hanh Pham",              group: "CSG",   email: "hieuhanh@synopsys.com", rating: 400 },
-    { id: 31, name: "Cuong Truong",           group: "CSG",   email: "ctruong@synopsys.com",  rating: 500 },
-    { id: 32, name: "Qui Nguyen",             group: "CSG",   email: "thanhqui@synopsys.com", rating: 600 },
-    { id: 33, name: "Dương Chí Tông",         group: "SSG",   email: "chitong@synopsys.com",  rating: 700 },
-    { id: 34, name: "Jane Nguyen",            group: "Field", email: "chitong@synopsys.com",  rating: 700 },
-    { id: 35, name: "Huy Nguyen",             group: "TPG",   email: "duchuyn@synopsys.com",  rating: 500 },
+    { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", email: "", rating: 800 },
+    { id: 2,  name: "Do Nguyen Hoang Vu",    group: "Field", email: "", rating: 820 },
+    { id: 3,  name: "Pham Thieu Khang",      group: "PV",    email: "", rating: 990 },
+    { id: 4,  name: "Hoàng Quốc Khánh",      group: "PD",    email: "", rating: 700 },
+    { id: 5,  name: "Nam Nguyen",             group: "Field", email: "", rating: 770 },
+    { id: 6,  name: "Huynh Nguyen",           group: "SSG",   email: "", rating: 760 },
+    { id: 7,  name: "Huy Hoang",              group: "SSG",   email: "", rating: 770 },
+    { id: 8,  name: "Nghia Huynh",            group: "AE",    email: "", rating: 600 },
+    { id: 9,  name: "Hùng Nguyễn",            group: "AE",    email: "", rating: 500 },
+    { id: 10, name: "Tú Bùi",                 group: "AE",    email: "", rating: 500 },
+    { id: 11, name: "Khang Nguyễn",           group: "AE",    email: "", rating: 750 },
+    { id: 12, name: "Phu-Qui Pham",           group: "AE",    email: "", rating: 400 },
+    { id: 13, name: "Chồng Nhật Cường",       group: "IPG",   email: "", rating: 790 },
+    { id: 14, name: "Las Tran",               group: "AE",    email: "", rating: 500 },
+    { id: 15, name: "Harry Luong",            group: "SSG",   email: "", rating: 700 },
+    { id: 16, name: "Thuc Nguyen",            group: "CSG",   email: "", rating: 650 },
+    { id: 17, name: "Khanh Nguyen",           group: "SSG",   email: "", rating: 400 },
+    { id: 18, name: "Nguyen Ngoc Tien",       group: "CSG",   email: "", rating: 650 },
+    { id: 19, name: "Le Ngoc Thao",           group: "CSG",   email: "", rating: 750 },
+    { id: 20, name: "Tyluke",                 group: "IPG",   email: "", rating: 760 },
+    { id: 21, name: "Kyrene Gay Paglumotan",  group: "TPG",   email: "", rating: 650 },
+    { id: 22, name: "Võ Quang Thanh Nghĩa",   group: "Field", email: "", rating: 600 },
+    { id: 23, name: "Vo Ngoc Hieu",           group: "SSG",   email: "", rating: 500 },
+    { id: 24, name: "Ngo Tran Viet Khai",     group: "SSG",   email: "", rating: 500 },
+    { id: 25, name: "Thinh Ta",               group: "Field", email: "", rating: 790 },
+    { id: 26, name: "Nguyễn Kim Anh",         group: "Field", email: "", rating: 600 },
+    { id: 27, name: "Trần Thanh Liêm",        group: "SSG",   email: "", rating: 500 },
+    { id: 28, name: "Châu Pham",              group: "CSG",   email: "", rating: 400 },
+    { id: 29, name: "Tân Nguyễn",             group: "CSG",   email: "", rating: 500 },
+    { id: 30, name: "Hanh Pham",              group: "CSG",   email: "", rating: 400 },
+    { id: 31, name: "Cuong Truong",           group: "CSG",   email: "", rating: 500 },
+    { id: 32, name: "Qui Nguyen",             group: "CSG",   email: "", rating: 600 },
+    { id: 33, name: "Dương Chí Tông",         group: "SSG",   email: "", rating: 700 },
+    { id: 34, name: "Jane Nguyen",            group: "Field", email: "", rating: 700 },
+    { id: 35, name: "Huy Nguyen",             group: "TPG",   email: "", rating: 500 },
 ];
 
 const FUN_HANDICAP_LABELS = {
@@ -115,6 +115,17 @@ const FUN_HANDICAP_LABELS = {
 const K_FACTOR = 32;
 const FORM_WINDOW = 5;
 const STORAGE_PREFIX = 'snps_pp_';
+
+// ============================================================
+// Password Hashing (SHA-256)
+// ============================================================
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + '_snps_pp_salt_2026');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // ============================================================
 // Auth System
@@ -135,7 +146,10 @@ class Auth {
 
     _ensureAdmin() {
         if (!this._users.find(u => u.username === 'admin')) {
-            this._users.push({ username: 'admin', password: 'Pass1234', displayName: 'Admin', role: 'admin', reputation: 5 });
+            this._users.push({
+                username: 'admin', password: null, displayName: 'Admin',
+                role: 'admin', reputation: 5, needsSetup: true,
+            });
             this._saveUsers();
         }
         this._users.forEach(u => {
@@ -148,14 +162,42 @@ class Auth {
         sync.save({ users: this._users });
     }
 
+    async _migrateIfPlainText(user, plainPassword) {
+        if (user.password && user.password.length !== 64) {
+            user.password = await hashPassword(plainPassword);
+            this._saveUsers();
+        }
+    }
+
     getUsers() { return this._users; }
     getUser(username) { return this._users.find(u => u.username === username); }
+    isAdminNeedsSetup() { const a = this.getUser('admin'); return a && a.needsSetup; }
 
-    login(username, password) {
-        const user = this._users.find(u => u.username === username && u.password === password);
+    async login(username, password) {
+        const user = this._users.find(u => u.username === username);
         if (!user) return null;
-        sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
-        return user;
+        if (user.needsSetup) return null;
+        const hashed = await hashPassword(password);
+        if (user.password === hashed) {
+            sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
+            return user;
+        }
+        if (user.password === password) {
+            await this._migrateIfPlainText(user, password);
+            sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
+            return user;
+        }
+        return null;
+    }
+
+    async setupAdmin(password) {
+        const admin = this.getUser('admin');
+        if (!admin) return null;
+        admin.password = await hashPassword(password);
+        admin.needsSetup = false;
+        this._saveUsers();
+        sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(admin));
+        return admin;
     }
 
     loginGuest() {
@@ -164,15 +206,16 @@ class Auth {
         return guest;
     }
 
-    register(username, password, playerId, newPlayerData) {
+    async register(username, password, playerId, newPlayerData) {
         if (this._users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
         if (playerId && playerId !== '__new__') {
             const taken = this._users.find(u => u.playerId === parseInt(playerId));
             if (taken) return { error: `Tay vợt này đã được liên kết với tài khoản "${taken.username}"!` };
         }
         const displayName = newPlayerData ? newPlayerData.name : (this._getPlayerName ? this._getPlayerName(parseInt(playerId)) : username);
+        const hashed = await hashPassword(password);
         const user = {
-            username, password, displayName,
+            username, password: hashed, displayName,
             role: 'user',
             reputation: 5,
             playerId: playerId === '__new__' ? null : (playerId ? parseInt(playerId) : null),
@@ -194,6 +237,13 @@ class Auth {
         if (session && session.username === username) {
             sessionStorage.setItem(STORAGE_PREFIX + 'session', JSON.stringify(user));
         }
+    }
+
+    async changePassword(username, newPassword) {
+        const user = this.getUser(username);
+        if (!user) return;
+        user.password = await hashPassword(newPassword);
+        this._saveUsers();
     }
 
     adjustReputation(username, delta) {
@@ -591,12 +641,15 @@ class UI {
             this.enterApp(this.auth.loginGuest());
         });
 
-        document.getElementById('loginForm').addEventListener('submit', e => {
+        document.getElementById('loginForm').addEventListener('submit', async e => {
             e.preventDefault();
-            const user = this.auth.login(
-                document.getElementById('loginUser').value.trim(),
-                document.getElementById('loginPass').value
-            );
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+            if (username === 'admin' && this.auth.isAdminNeedsSetup()) {
+                this._showAdminSetup();
+                return;
+            }
+            const user = await this.auth.login(username, password);
             if (user) this.enterApp(user);
             else document.getElementById('loginError').textContent = 'Sai tên đăng nhập hoặc mật khẩu!';
         });
@@ -619,7 +672,7 @@ class UI {
         }
         this.auth._getPlayerName = (id) => { const p = this.state.getPlayer(id); return p ? p.name : ''; };
 
-        document.getElementById('registerForm').addEventListener('submit', e => {
+        document.getElementById('registerForm').addEventListener('submit', async e => {
             e.preventDefault();
             const pass = document.getElementById('regPass').value;
             const confirmPass = document.getElementById('regPassConfirm').value;
@@ -636,7 +689,7 @@ class UI {
             } else if (!playerId) {
                 document.getElementById('regError').textContent = 'Chọn tay vợt hoặc tạo mới!'; return;
             }
-            const result = this.auth.register(
+            const result = await this.auth.register(
                 document.getElementById('regUser').value.trim(), pass, playerId, newPlayerData
             );
             if (result.error) { document.getElementById('regError').textContent = result.error; return; }
@@ -676,6 +729,37 @@ class UI {
         });
 
         this.initApp();
+    }
+
+    _showAdminSetup() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `<div class="modal-card" style="max-width:400px;">
+            <div class="modal-logo">
+                <i class="fas fa-shield-halved"></i>
+                <h2>Thiết lập Admin</h2>
+            </div>
+            <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:16px;">
+                Lần đầu đăng nhập. Hãy tạo mật khẩu Admin mới.</p>
+            <div class="form-group"><label>Mật khẩu mới (6+ ký tự)</label>
+                <input type="password" id="adminSetupPass" placeholder="Mật khẩu mới" minlength="6" class="form-input" required></div>
+            <div class="form-group"><label>Xác nhận mật khẩu</label>
+                <input type="password" id="adminSetupPassConfirm" placeholder="Nhập lại mật khẩu" class="form-input" required></div>
+            <div class="auth-error" id="adminSetupError"></div>
+            <button class="btn-auth" id="btnAdminSetup" style="width:100%;margin-top:8px;">Tạo mật khẩu & Đăng nhập</button>
+        </div>`;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#btnAdminSetup').addEventListener('click', async () => {
+            const pass = modal.querySelector('#adminSetupPass').value;
+            const confirm = modal.querySelector('#adminSetupPassConfirm').value;
+            const err = modal.querySelector('#adminSetupError');
+            if (pass.length < 6) { err.textContent = 'Mật khẩu tối thiểu 6 ký tự!'; return; }
+            if (pass !== confirm) { err.textContent = 'Mật khẩu xác nhận không khớp!'; return; }
+            const admin = await this.auth.setupAdmin(pass);
+            if (admin) { modal.remove(); this.enterApp(admin); }
+        });
     }
 
     initApp() {
@@ -1409,6 +1493,8 @@ class UI {
                     <option value="">-- Chưa liên kết --</option>${playerOpts}</select></div>
             <div class="form-group"><label>Uy tín (0-5 sao)</label>
                 <input type="number" id="editUserRep" value="${repVal}" min="0" max="5" step="0.5" class="form-input"></div>
+            <div class="form-group"><label>Đặt lại mật khẩu</label>
+                <input type="password" id="editUserNewPass" placeholder="Để trống nếu không đổi" class="form-input"></div>
             <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;">
                 <button class="btn-secondary" id="editUserCancel">Hủy</button>
                 <button class="btn-primary" id="editUserSave">Lưu</button></div>
@@ -1417,15 +1503,19 @@ class UI {
 
         modal.querySelector('#editUserCancel').addEventListener('click', () => modal.remove());
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-        modal.querySelector('#editUserSave').addEventListener('click', () => {
+        modal.querySelector('#editUserSave').addEventListener('click', async () => {
             const displayName = modal.querySelector('#editUserDisplay').value.trim();
             const playerId = modal.querySelector('#editUserPlayer').value;
             const reputation = parseFloat(modal.querySelector('#editUserRep').value);
+            const newPass = modal.querySelector('#editUserNewPass').value;
             this.auth.updateUser(user.username, {
                 displayName: displayName || user.displayName,
                 playerId: playerId ? parseInt(playerId) : null,
                 reputation: Math.max(0, Math.min(5, reputation)),
             });
+            if (newPass && newPass.length >= 4) {
+                await this.auth.changePassword(user.username, newPass);
+            }
             modal.remove();
             this.renderAdminUsers();
             this.showToast(`Đã cập nhật tài khoản ${user.username}`, 'success');
