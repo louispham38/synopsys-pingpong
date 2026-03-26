@@ -339,7 +339,20 @@ class AppState {
         p.streakType = p.streakType || null;
         p.initialRating = p.initialRating || p.rating;
         p.lastDelta = p.lastDelta || 0;
+        p.email = p.email || '';
         return p;
+    }
+
+    scrubEmails() {
+        let changed = false;
+        this.players.forEach(p => {
+            const initial = INITIAL_PLAYERS.find(ip => ip.id === p.id);
+            if (initial && p.email && p.email.includes('@')) {
+                p.email = '';
+                changed = true;
+            }
+        });
+        if (changed) this.savePlayers();
     }
 
     _normalizePlayers(players) {
@@ -998,6 +1011,14 @@ class UI {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    _maskEmail(email) {
+        if (!email) return '-';
+        const [local, domain] = email.split('@');
+        if (!domain) return '-';
+        const masked = local.length <= 2 ? local[0] + '***' : local.slice(0, 2) + '***';
+        return `${masked}@${domain}`;
     }
 
     bindChallenges() {
@@ -1838,7 +1859,7 @@ class UI {
                 <td class="col-rank"><span class="rank-number">${rank}</span></td>
                 <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text">${p.name}</div>${linkedUser ? `<div class="player-linked-user">(${linkedUser})</div>` : ''}</div></div></td>
                 <td class="col-group"><span class="group-badge badge-${p.group.toLowerCase()}">${p.group}</span></td>
-                <td class="col-email">${p.email}</td>
+                <td class="col-email">${this._maskEmail(p.email)}</td>
                 <td class="col-rating"><div class="rating-display"><span class="rating-value">${p.rating}</span><span class="rating-delta ${cls}">${delta > 0 ? '+' : ''}${delta}</span></div></td>
                 <td class="col-form"><div class="form-display"><div class="form-dots">${form}</div><span class="form-label ${formLabel.cls}">${formLabel.text}</span></div></td>
                 <td class="col-record"><div class="record-display"><span>${p.wins}W - ${p.losses}L</span>${total > 0 ? `<div class="win-rate-bar"><div class="win-rate-fill" style="width:${wr}%"></div></div>` : ''}</div></td>
@@ -1989,6 +2010,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data) {
                 state.loadFromCloud(data);
                 auth.loadFromCloud(data.users);
+                state.scrubEmails();
                 const cloudHasPlayers = data.players && data.players.length;
                 if (!cloudHasPlayers && state.players.length > 0) {
                     sync.save({
