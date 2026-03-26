@@ -63,41 +63,41 @@ const sync = new SyncManager();
 // ============================================================
 
 const INITIAL_PLAYERS = [
-    { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", email: "", rating: 800 },
-    { id: 2,  name: "Do Nguyen Hoang Vu",    group: "Field", email: "", rating: 820 },
-    { id: 3,  name: "Pham Thieu Khang",      group: "PV",    email: "", rating: 990 },
-    { id: 4,  name: "Hoàng Quốc Khánh",      group: "PD",    email: "", rating: 700 },
-    { id: 5,  name: "Nam Nguyen",             group: "Field", email: "", rating: 770 },
-    { id: 6,  name: "Huynh Nguyen",           group: "SSG",   email: "", rating: 760 },
-    { id: 7,  name: "Huy Hoang",              group: "SSG",   email: "", rating: 770 },
-    { id: 8,  name: "Nghia Huynh",            group: "AE",    email: "", rating: 600 },
-    { id: 9,  name: "Hùng Nguyễn",            group: "AE",    email: "", rating: 500 },
-    { id: 10, name: "Tú Bùi",                 group: "AE",    email: "", rating: 500 },
-    { id: 11, name: "Khang Nguyễn",           group: "AE",    email: "", rating: 750 },
-    { id: 12, name: "Phu-Qui Pham",           group: "AE",    email: "", rating: 400 },
-    { id: 13, name: "Chồng Nhật Cường",       group: "IPG",   email: "", rating: 790 },
-    { id: 14, name: "Las Tran",               group: "AE",    email: "", rating: 500 },
-    { id: 15, name: "Harry Luong",            group: "SSG",   email: "", rating: 700 },
-    { id: 16, name: "Thuc Nguyen",            group: "CSG",   email: "", rating: 650 },
-    { id: 17, name: "Khanh Nguyen",           group: "SSG",   email: "", rating: 400 },
-    { id: 18, name: "Nguyen Ngoc Tien",       group: "CSG",   email: "", rating: 650 },
-    { id: 19, name: "Le Ngoc Thao",           group: "CSG",   email: "", rating: 750 },
-    { id: 20, name: "Tyluke",                 group: "IPG",   email: "", rating: 760 },
-    { id: 21, name: "Kyrene Gay Paglumotan",  group: "TPG",   email: "", rating: 650 },
-    { id: 22, name: "Võ Quang Thanh Nghĩa",   group: "Field", email: "", rating: 600 },
-    { id: 23, name: "Vo Ngoc Hieu",           group: "SSG",   email: "", rating: 500 },
-    { id: 24, name: "Ngo Tran Viet Khai",     group: "SSG",   email: "", rating: 500 },
-    { id: 25, name: "Thinh Ta",               group: "Field", email: "", rating: 790 },
-    { id: 26, name: "Nguyễn Kim Anh",         group: "Field", email: "", rating: 600 },
-    { id: 27, name: "Trần Thanh Liêm",        group: "SSG",   email: "", rating: 500 },
-    { id: 28, name: "Châu Pham",              group: "CSG",   email: "", rating: 400 },
-    { id: 29, name: "Tân Nguyễn",             group: "CSG",   email: "", rating: 500 },
-    { id: 30, name: "Hanh Pham",              group: "CSG",   email: "", rating: 400 },
-    { id: 31, name: "Cuong Truong",           group: "CSG",   email: "", rating: 500 },
-    { id: 32, name: "Qui Nguyen",             group: "CSG",   email: "", rating: 600 },
-    { id: 33, name: "Dương Chí Tông",         group: "SSG",   email: "", rating: 700 },
-    { id: 34, name: "Jane Nguyen",            group: "Field", email: "", rating: 700 },
-    { id: 35, name: "Huy Nguyen",             group: "TPG",   email: "", rating: 500 },
+    { id: 1,  name: "Nguyễn Thế Sự",        group: "Field", rating: 800 },
+    { id: 2,  name: "Do Nguyen Hoang Vu",    group: "Field", rating: 820 },
+    { id: 3,  name: "Pham Thieu Khang",      group: "PV",    rating: 990 },
+    { id: 4,  name: "Hoàng Quốc Khánh",      group: "PD",    rating: 700 },
+    { id: 5,  name: "Nam Nguyen",             group: "Field", rating: 770 },
+    { id: 6,  name: "Huynh Nguyen",           group: "SSG",   rating: 760 },
+    { id: 7,  name: "Huy Hoang",              group: "SSG",   rating: 770 },
+    { id: 8,  name: "Nghia Huynh",            group: "AE",    rating: 600 },
+    { id: 9,  name: "Hùng Nguyễn",            group: "AE",    rating: 500 },
+    { id: 10, name: "Tú Bùi",                 group: "AE",    rating: 500 },
+    { id: 11, name: "Khang Nguyễn",           group: "AE",    rating: 750 },
+    { id: 12, name: "Phu-Qui Pham",           group: "AE",    rating: 400 },
+    { id: 13, name: "Chồng Nhật Cường",       group: "IPG",   rating: 790 },
+    { id: 14, name: "Las Tran",               group: "AE",    rating: 500 },
+    { id: 15, name: "Harry Luong",            group: "SSG",   rating: 700 },
+    { id: 16, name: "Thuc Nguyen",            group: "CSG",   rating: 650 },
+    { id: 17, name: "Khanh Nguyen",           group: "SSG",   rating: 400 },
+    { id: 18, name: "Nguyen Ngoc Tien",       group: "CSG",   rating: 650 },
+    { id: 19, name: "Le Ngoc Thao",           group: "CSG",   rating: 750 },
+    { id: 20, name: "Tyluke",                 group: "IPG",   rating: 760 },
+    { id: 21, name: "Kyrene Gay Paglumotan",  group: "TPG",   rating: 650 },
+    { id: 22, name: "Võ Quang Thanh Nghĩa",   group: "Field", rating: 600 },
+    { id: 23, name: "Vo Ngoc Hieu",           group: "SSG",   rating: 500 },
+    { id: 24, name: "Ngo Tran Viet Khai",     group: "SSG",   rating: 500 },
+    { id: 25, name: "Thinh Ta",               group: "Field", rating: 790 },
+    { id: 26, name: "Nguyễn Kim Anh",         group: "Field", rating: 600 },
+    { id: 27, name: "Trần Thanh Liêm",        group: "SSG",   rating: 500 },
+    { id: 28, name: "Châu Pham",              group: "CSG",   rating: 400 },
+    { id: 29, name: "Tân Nguyễn",             group: "CSG",   rating: 500 },
+    { id: 30, name: "Hanh Pham",              group: "CSG",   rating: 400 },
+    { id: 31, name: "Cuong Truong",           group: "CSG",   rating: 500 },
+    { id: 32, name: "Qui Nguyen",             group: "CSG",   rating: 600 },
+    { id: 33, name: "Dương Chí Tông",         group: "SSG",   rating: 700 },
+    { id: 34, name: "Jane Nguyen",            group: "Field", rating: 700 },
+    { id: 35, name: "Huy Nguyen",             group: "TPG",   rating: 500 },
 ];
 
 const FUN_HANDICAP_LABELS = {
@@ -341,18 +341,6 @@ class AppState {
         p.lastDelta = p.lastDelta || 0;
         p.email = p.email || '';
         return p;
-    }
-
-    scrubEmails() {
-        let changed = false;
-        this.players.forEach(p => {
-            const initial = INITIAL_PLAYERS.find(ip => ip.id === p.id);
-            if (initial && p.email && p.email.includes('@')) {
-                p.email = '';
-                changed = true;
-            }
-        });
-        if (changed) this.savePlayers();
     }
 
     _normalizePlayers(players) {
@@ -2010,7 +1998,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data) {
                 state.loadFromCloud(data);
                 auth.loadFromCloud(data.users);
-                state.scrubEmails();
                 const cloudHasPlayers = data.players && data.players.length;
                 if (!cloudHasPlayers && state.players.length > 0) {
                     sync.save({
