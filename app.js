@@ -1733,6 +1733,8 @@ class UI {
         });
 
         const allSorted = this.state.getSortedPlayers();
+        const userMap = {};
+        this.auth.getUsers().forEach(u => { if (u.playerId) userMap[u.playerId] = u.displayName; });
         document.getElementById('rankingBody').innerHTML = players.map(p => {
             const rank = allSorted.findIndex(x => x.id === p.id) + 1;
             const form = this.getFormDots(p);
@@ -1741,9 +1743,10 @@ class UI {
             const cls = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
             const total = p.wins + p.losses;
             const wr = total > 0 ? Math.round(p.wins / total * 100) : 0;
+            const linkedUser = userMap[p.id];
             return `<tr class="${rank <= 3 ? 'top-rank rank-' + rank : ''}">
                 <td class="col-rank"><span class="rank-number">${rank}</span></td>
-                <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text">${p.name}</div></div></div></td>
+                <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text">${p.name}</div>${linkedUser ? `<div class="player-linked-user">(${linkedUser})</div>` : ''}</div></div></td>
                 <td class="col-group"><span class="group-badge badge-${p.group.toLowerCase()}">${p.group}</span></td>
                 <td class="col-email">${p.email}</td>
                 <td class="col-rating"><div class="rating-display"><span class="rating-value">${p.rating}</span><span class="rating-delta ${cls}">${delta > 0 ? '+' : ''}${delta}</span></div></td>
