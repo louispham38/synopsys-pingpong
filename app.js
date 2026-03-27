@@ -751,6 +751,11 @@ class UI {
                 this.auth.updateUser(result.username, { playerId: p.id, displayName: p.name });
                 delete result._pendingPlayer;
             }
+            const playerLinked = result.playerId ? this.state.getPlayer(result.playerId) : null;
+            const regMsg = playerLinked
+                ? `${result.displayName} vừa đăng ký tài khoản (tay vợt: ${playerLinked.name})`
+                : `${result.displayName} vừa đăng ký tài khoản`;
+            this.state.sendChat('system', 'Hệ thống', regMsg, 'system');
             this.enterApp(result);
         });
 
@@ -1034,11 +1039,12 @@ class UI {
             const isMine = m.username === myName;
             const isChallenge = m.type === 'challenge';
             const isResult = m.type === 'result';
+            const isSystem = m.type === 'system';
             const time = new Date(m.time);
             const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
             const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-            const typeClass = isResult ? 'chat-result' : isChallenge ? 'chat-challenge' : '';
-            const icon = isResult ? '<i class="fas fa-trophy"></i> ' : isChallenge ? '<i class="fas fa-table-tennis-paddle-ball"></i> ' : '';
+            const typeClass = isResult ? 'chat-result' : isSystem ? 'chat-system' : isChallenge ? 'chat-challenge' : '';
+            const icon = isResult ? '<i class="fas fa-trophy"></i> ' : isSystem ? '<i class="fas fa-user-plus"></i> ' : isChallenge ? '<i class="fas fa-table-tennis-paddle-ball"></i> ' : '';
             return `<div class="chat-msg ${isMine ? 'chat-mine' : ''} ${typeClass}">
                 <div class="chat-msg-header">
                     <span class="chat-sender">${m.displayName}</span>
