@@ -133,15 +133,36 @@ async function hashPassword(password) {
 class Auth {
     constructor() {
         this._users = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'users') || '[]');
+        this._saveCooldown = false;
+        this._cooldownTimer = null;
         this._ensureAdmin();
     }
 
     loadFromCloud(users) {
-        if (Array.isArray(users) && users.length) {
-            this._users = users;
-            localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
-            this._ensureAdmin();
-        }
+        if (this._saveCooldown) return;
+        if (!Array.isArray(users) || !users.length) return;
+
+        const merged = [...users];
+        this._users.forEach(local => {
+            if (!merged.find(c => c.username === local.username)) {
+                merged.push(local);
+            }
+        });
+
+        merged.forEach((cloud, i) => {
+            const local = this._users.find(u => u.username === cloud.username);
+            if (local) {
+                const localTime = new Date(local.registeredAt || 0).getTime();
+                const cloudTime = new Date(cloud.registeredAt || 0).getTime();
+                if (local.password && !cloud.password) merged[i] = local;
+                else if (local.playerId && !cloud.playerId) Object.assign(merged[i], { playerId: local.playerId });
+                if (local.reputation !== undefined && cloud.reputation === undefined) merged[i].reputation = local.reputation;
+            }
+        });
+
+        this._users = merged;
+        localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
+        this._ensureAdmin();
     }
 
     _ensureAdmin() {
@@ -159,6 +180,9 @@ class Auth {
 
     _saveUsers() {
         localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
+        this._saveCooldown = true;
+        clearTimeout(this._cooldownTimer);
+        this._cooldownTimer = setTimeout(() => { this._saveCooldown = false; }, 10000);
         sync.save({ users: this._users });
     }
 
@@ -2017,7 +2041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ui = new UI(state, auth);
 
     function refreshFromCloud() {
-        if (!sync.enabled || state._saveCooldown) return Promise.resolve();
+        if (!sync.enabled) return Promise.resolve();
         const indicator = document.getElementById('syncIndicator');
         if (indicator) indicator.classList.add('syncing');
         return sync.fetchAll().then(data => {
