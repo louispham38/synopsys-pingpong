@@ -230,13 +230,13 @@ class Auth {
         return guest;
     }
 
-    async register(username, password, playerId, newPlayerData) {
+    async register(username, password, customDisplayName, playerId, newPlayerData) {
         if (this._users.find(u => u.username === username)) return { error: 'Tên đăng nhập đã tồn tại!' };
         if (playerId && playerId !== '__new__') {
             const taken = this._users.find(u => u.playerId === parseInt(playerId));
             if (taken) return { error: `Tay vợt này đã được liên kết với tài khoản "${taken.username}"!` };
         }
-        const displayName = newPlayerData ? newPlayerData.name : (this._getPlayerName ? this._getPlayerName(parseInt(playerId)) : username);
+        const displayName = customDisplayName || (newPlayerData ? newPlayerData.name : (this._getPlayerName ? this._getPlayerName(parseInt(playerId)) : username));
         const hashed = await hashPassword(password);
         const user = {
             username, password: hashed, displayName,
@@ -742,8 +742,9 @@ class UI {
             } else if (!playerId) {
                 document.getElementById('regError').textContent = 'Chọn tay vợt hoặc tạo mới!'; return;
             }
+            const customName = document.getElementById('regDisplayName').value.trim();
             const result = await this.auth.register(
-                document.getElementById('regUser').value.trim(), pass, playerId, newPlayerData
+                document.getElementById('regUser').value.trim(), pass, customName, playerId, newPlayerData
             );
             if (result.error) { document.getElementById('regError').textContent = result.error; return; }
             if (newPlayerData) {
