@@ -6,7 +6,7 @@
 // Google Sheets Sync Configuration
 // ============================================================
 // Paste your Google Apps Script Web App URL here after deployment:
-const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw1cGWs7gJrljP-e2AbtnhW9DIhhU-SF13T28OEY5Ft0Njqfzo_A_alDc4yUuLP6US0/exec';
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbzwoaEsQ85gSG_w2HC4XOFUKCJOEJxPBwgMlhIaCR1AiR7PnfYHSSDb36WvBRDJWIJk/exec';
 
 // ============================================================
 // Sync Manager — Google Sheets Backend
