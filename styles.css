@@ -2873,6 +2873,23 @@ body {
 }
 
 /* Sync Button */
+.viewer-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--success);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.viewer-count i {
+    font-size: 11px;
+    opacity: 0.9;
+}
 .btn-sync {
     background: transparent;
     border: 1px solid var(--border);

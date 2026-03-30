@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synopsys Ping Pong VN07 Club - Bảng Xếp Hạng</title>
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
@@ -110,6 +110,7 @@
                         </div>
                     </div>
                     <div class="user-menu">
+                        <span class="viewer-count" id="viewerCount" title="Đang xem"><i class="fas fa-eye"></i> <span id="viewerNum">0</span></span>
                         <button class="btn-sync" id="btnSync" title="Đồng bộ dữ liệu">
                             <i class="fas fa-sync-alt" id="syncIndicator"></i>
                         </button>
@@ -621,6 +622,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=19"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

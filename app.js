@@ -2047,6 +2047,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = new Auth();
     const ui = new UI(state, auth);
 
+    const viewerId = 'v_' + Math.random().toString(36).slice(2, 10);
+
+    function updateViewerCount(count) {
+        const el = document.getElementById('viewerNum');
+        if (el) el.textContent = count || 0;
+    }
+
+    function sendHeartbeat() {
+        if (!sync.enabled || !sync.apiUrl) return;
+        const session = auth.getSession();
+        const name = session ? session.displayName : 'Guest';
+        fetch(sync.apiUrl, {
+            method: 'POST', redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ heartbeat: { id: viewerId, n: name } })
+        }).catch(() => {});
+    }
+
     function refreshFromCloud() {
         if (!sync.enabled) return Promise.resolve();
         const indicator = document.getElementById('syncIndicator');
@@ -2055,6 +2073,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data) return;
             state.loadFromCloud(data);
             auth.loadFromCloud(data.users);
+            if (data.viewerCount !== undefined) updateViewerCount(data.viewerCount);
             ui.populateSelects();
             ui.render();
             if (auth.isAdmin()) {
@@ -2083,6 +2102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         challenges: state.challenges,
                     });
                 }
+                if (data.viewerCount !== undefined) updateViewerCount(data.viewerCount);
                 ui.populateSelects();
                 ui.render();
                 if (auth.isAdmin()) {
@@ -2092,9 +2112,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        sendHeartbeat();
         setInterval(refreshFromCloud, 15000);
+        setInterval(sendHeartbeat, 30000);
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) refreshFromCloud();
+            if (!document.hidden) { refreshFromCloud(); sendHeartbeat(); }
         });
     }
 

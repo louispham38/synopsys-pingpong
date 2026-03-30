@@ -16,12 +16,18 @@ function doGet(e) {
       sheet.getRange('A3').setValue('[]');
     }
 
+    var viewers = JSON.parse(sheet.getRange('A6').getValue() || '[]');
+    var now = new Date().getTime();
+    viewers = viewers.filter(function(v) { return (now - v.t) < 60000; });
+    sheet.getRange('A6').setValue(JSON.stringify(viewers));
+
     var response = {
       players:    JSON.parse(sheet.getRange('A1').getValue() || '[]'),
       matches:    JSON.parse(sheet.getRange('A2').getValue() || '[]'),
       users:      JSON.parse(sheet.getRange('A3').getValue() || '[]'),
       chat:       JSON.parse(sheet.getRange('A4').getValue() || '[]'),
-      challenges: JSON.parse(sheet.getRange('A5').getValue() || '[]')
+      challenges: JSON.parse(sheet.getRange('A5').getValue() || '[]'),
+      viewerCount: viewers.length
     };
 
     return ContentService
@@ -53,6 +59,16 @@ function doPost(e) {
       sheet.getRange('A4').setValue(JSON.stringify(payload.chat));
     if (payload.challenges !== undefined)
       sheet.getRange('A5').setValue(JSON.stringify(payload.challenges));
+
+    if (payload.heartbeat) {
+      var viewers = JSON.parse(sheet.getRange('A6').getValue() || '[]');
+      var now = new Date().getTime();
+      viewers = viewers.filter(function(v) { return (now - v.t) < 60000; });
+      var existing = viewers.findIndex(function(v) { return v.id === payload.heartbeat.id; });
+      if (existing >= 0) viewers[existing].t = now;
+      else viewers.push({ id: payload.heartbeat.id, n: payload.heartbeat.n, t: now });
+      sheet.getRange('A6').setValue(JSON.stringify(viewers));
+    }
 
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, timestamp: new Date().toISOString() }))
