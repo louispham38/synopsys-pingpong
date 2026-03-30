@@ -19,10 +19,14 @@ class SyncManager {
         this._pendingSave = null;
     }
 
-    async fetchAll() {
+    async fetchAll(extraParams) {
         if (!this.enabled) return null;
         try {
-            const res = await fetch(this.apiUrl + '?t=' + Date.now(), { redirect: 'follow' });
+            let url = this.apiUrl + '?t=' + Date.now();
+            if (extraParams) Object.keys(extraParams).forEach(k => {
+                url += '&' + k + '=' + encodeURIComponent(extraParams[k]);
+            });
+            const res = await fetch(url, { redirect: 'follow' });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return await res.json();
         } catch (e) {
@@ -2054,22 +2058,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.textContent = count || 0;
     }
 
-    function sendHeartbeat() {
-        if (!sync.enabled || !sync.apiUrl) return;
+    function viewerParams() {
         const session = auth.getSession();
         const name = session ? session.displayName : 'Guest';
-        fetch(sync.apiUrl, {
-            method: 'POST', redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ heartbeat: { id: viewerId, n: name } })
-        }).catch(() => {});
+        return { vid: viewerId, vn: name };
     }
 
     function refreshFromCloud() {
         if (!sync.enabled) return Promise.resolve();
         const indicator = document.getElementById('syncIndicator');
         if (indicator) indicator.classList.add('syncing');
-        return sync.fetchAll().then(data => {
+        return sync.fetchAll(viewerParams()).then(data => {
             if (!data) return;
             state.loadFromCloud(data);
             auth.loadFromCloud(data.users);
@@ -2087,7 +2086,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (sync.enabled) {
-        sync.fetchAll().then(data => {
+        sync.fetchAll(viewerParams()).then(data => {
             if (data) {
                 state.loadFromCloud(data);
                 auth.loadFromCloud(data.users);
@@ -2112,11 +2111,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        sendHeartbeat();
         setInterval(refreshFromCloud, 15000);
-        setInterval(sendHeartbeat, 30000);
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) { refreshFromCloud(); sendHeartbeat(); }
+            if (!document.hidden) refreshFromCloud();
         });
     }
 
