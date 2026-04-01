@@ -146,25 +146,22 @@ class Auth {
         if (this._saveCooldown) return;
         if (!Array.isArray(users) || !users.length) return;
 
-        const merged = [...users];
-        this._users.forEach(local => {
-            if (!merged.find(c => c.username === local.username)) {
-                merged.push(local);
+        const cloudMap = new Map(users.map(u => [u.username, { ...u }]));
+        const localMap = new Map(this._users.map(u => [u.username, u]));
+
+        localMap.forEach((local, key) => {
+            if (!cloudMap.has(key)) cloudMap.set(key, local);
+            else {
+                const merged = cloudMap.get(key);
+                if (local.password && !merged.password) merged.password = local.password;
+                if (local.playerId && !merged.playerId) merged.playerId = local.playerId;
+                if (local.displayName && !merged.displayName) merged.displayName = local.displayName;
+                if (local.reputation !== undefined && merged.reputation === undefined) merged.reputation = local.reputation;
+                if (local.role && !merged.role) merged.role = local.role;
             }
         });
 
-        merged.forEach((cloud, i) => {
-            const local = this._users.find(u => u.username === cloud.username);
-            if (local) {
-                const localTime = new Date(local.registeredAt || 0).getTime();
-                const cloudTime = new Date(cloud.registeredAt || 0).getTime();
-                if (local.password && !cloud.password) merged[i] = local;
-                else if (local.playerId && !cloud.playerId) Object.assign(merged[i], { playerId: local.playerId });
-                if (local.reputation !== undefined && cloud.reputation === undefined) merged[i].reputation = local.reputation;
-            }
-        });
-
-        this._users = merged;
+        this._users = Array.from(cloudMap.values());
         localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
         this._ensureAdmin();
     }
@@ -656,6 +653,24 @@ class AppState {
         this._saveChallenges();
     }
 
+    createDirectMatch(playerAId, playerBId, sets, submittedBy) {
+        const playerA = this.getPlayer(playerAId);
+        const playerB = this.getPlayer(playerBId);
+        if (!playerA || !playerB) return { error: 'Không tìm thấy tay vợt!' };
+        const dm = {
+            id: Date.now(), type: 'direct',
+            fromUser: submittedBy, toUser: null,
+            fromPlayerId: playerAId, toPlayerId: playerBId,
+            status: 'score_submitted',
+            sets, submittedBy,
+            createdAt: new Date().toISOString(),
+            submittedAt: new Date().toISOString(),
+        };
+        this.challenges.push(dm);
+        this._saveChallenges();
+        return dm;
+    }
+
     getChallengesForUser(username) {
         return this.challenges.filter(c =>
             (c.fromUser === username || c.toUser === username) && c.status === 'pending'
@@ -1084,6 +1099,59 @@ class UI {
             return;
         }
 
+        const dmForm = document.getElementById('directMatchForm');
+        if (dmForm && session.role !== 'guest') {
+            const dmA = document.getElementById('dmPlayerA');
+            const dmB = document.getElementById('dmPlayerB');
+            this.state.getSortedPlayers().forEach(p => {
+                const optA = new Option(`${p.name} (${p.rating})`, p.id);
+                const optB = new Option(`${p.name} (${p.rating})`, p.id);
+                dmA.appendChild(optA);
+                dmB.appendChild(optB);
+            });
+
+            document.getElementById('dmAddSet').addEventListener('click', () => {
+                const setsDiv = document.getElementById('dmSets');
+                const count = setsDiv.querySelectorAll('.csf-set').length;
+                if (count >= 7) { this.showToast('Tối đa 7 set!', 'info'); return; }
+                const setEl = document.createElement('div');
+                setEl.className = 'csf-set';
+                setEl.innerHTML = `<span class="csf-set-label">Set ${count + 1}</span>
+                    <input type="number" class="dm-score-a" min="0" max="30" placeholder="0">
+                    <span>-</span>
+                    <input type="number" class="dm-score-b" min="0" max="30" placeholder="0">
+                    <button type="button" class="csf-remove-set" title="Xóa"><i class="fas fa-times"></i></button>`;
+                setEl.querySelector('.csf-remove-set').addEventListener('click', () => setEl.remove());
+                setsDiv.appendChild(setEl);
+            });
+
+            dmForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const aId = parseInt(dmA.value);
+                const bId = parseInt(dmB.value);
+                if (!aId || !bId) { this.showToast('Chọn cả 2 tay vợt!', 'error'); return; }
+                if (aId === bId) { this.showToast('Hai tay vợt phải khác nhau!', 'error'); return; }
+                const setEls = document.querySelectorAll('#dmSets .csf-set');
+                const sets = [];
+                let valid = true;
+                setEls.forEach(el => {
+                    const a = parseInt(el.querySelector('.dm-score-a').value) || 0;
+                    const b = parseInt(el.querySelector('.dm-score-b').value) || 0;
+                    if (a === 0 && b === 0) valid = false;
+                    sets.push({ scoreA: a, scoreB: b });
+                });
+                if (!valid || sets.length < 1) { this.showToast('Nhập đầy đủ tỉ số các set!', 'error'); return; }
+                const result = this.state.createDirectMatch(aId, bId, sets, session.username);
+                if (result.error) { this.showToast(result.error, 'error'); return; }
+                this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
+                dmForm.reset();
+                document.getElementById('dmSets').innerHTML = [1,2,3].map(i =>
+                    `<div class="csf-set"><span class="csf-set-label">Set ${i}</span><input type="number" class="dm-score-a" min="0" max="30" placeholder="0"><span>-</span><input type="number" class="dm-score-b" min="0" max="30" placeholder="0"></div>`
+                ).join('');
+                this.renderChallenges();
+            });
+        }
+
         const createForm = document.getElementById('challengeCreateForm');
         if (createForm) {
             const select = document.getElementById('challengeTarget');
@@ -1210,18 +1278,23 @@ class UI {
         if (submitted.length) {
             html += '<h4><i class="fas fa-clock"></i> Chờ Admin duyệt</h4>';
             submitted.forEach(c => {
+                const isDirect = c.type === 'direct';
+                const playerA = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
+                const playerB = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
                 const fromAcc = this.auth.getUser(c.fromUser);
                 const toAcc = this.auth.getUser(c.toUser);
+                const nameA = playerA ? playerA.name : (fromAcc ? fromAcc.displayName : c.fromUser);
+                const nameB = playerB ? playerB.name : (toAcc ? toAcc.displayName : (c.toUser || '?'));
                 const setsStr = (c.sets || []).map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
                 let setsA = 0, setsB = 0;
                 (c.sets || []).forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
                 html += `<div class="challenge-card challenge-submitted">
                     <div class="challenge-info">
-                        <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
+                        <strong>${nameA}</strong>
                         <span class="csf-result">${setsA}-${setsB}</span>
-                        <strong>${toAcc ? toAcc.displayName : c.toUser}</strong>
+                        <strong>${nameB}</strong>
                     </div>
-                    <div class="csf-detail">Sets: ${setsStr}</div>
+                    <div class="csf-detail">${isDirect ? '<span class="badge badge-direct"><i class="fas fa-pen"></i> Trực tiếp</span> ' : ''}Sets: ${setsStr}</div>
                     <span class="badge badge-submitted"><i class="fas fa-hourglass-half"></i> Chờ duyệt</span>
                 </div>`;
             });
@@ -1429,6 +1502,7 @@ class UI {
                 const setsStr = (c.sets || []).map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
                 let setsA = 0, setsB = 0;
                 (c.sets || []).forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
+                const isDirect = c.type === 'direct';
                 return `<div class="admin-challenge-item achi-review">
                     <div class="achi-players">
                         <strong>${fromPlayer ? fromPlayer.name : (fromAcc ? fromAcc.displayName : c.fromUser)}</strong>
@@ -1438,6 +1512,7 @@ class UI {
                         ${toPlayer ? `<small>(${toPlayer.rating})</small>` : ''}
                     </div>
                     <div class="achi-detail">
+                        ${isDirect ? '<span class="badge badge-direct"><i class="fas fa-pen"></i> Nhập trực tiếp</span>' : ''}
                         <span>Sets: ${setsStr}</span>
                         <span class="achi-submitter">Gửi bởi: <strong>${submitter ? submitter.displayName : c.submittedBy}</strong></span>
                         <span class="achi-time">${new Date(c.submittedAt).toLocaleString('vi-VN')}</span>
@@ -2052,16 +2127,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const ui = new UI(state, auth);
 
     const viewerId = 'v_' + Math.random().toString(36).slice(2, 10);
+    const heartbeatSync = new SyncManager();
 
     function updateViewerCount(count) {
         const el = document.getElementById('viewerNum');
-        if (el) el.textContent = count || 0;
+        if (el) el.textContent = Math.max(1, count || 0);
     }
 
     function viewerParams() {
         const session = auth.getSession();
         const name = session ? session.displayName : 'Guest';
         return { vid: viewerId, vn: name };
+    }
+
+    function sendHeartbeat() {
+        if (!heartbeatSync.enabled) return;
+        const session = auth.getSession();
+        const name = session ? session.displayName : 'Guest';
+        heartbeatSync.save({ heartbeat: { id: viewerId, n: name } });
     }
 
     function refreshFromCloud() {
@@ -2111,9 +2194,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        sendHeartbeat();
         setInterval(refreshFromCloud, 15000);
+        setInterval(sendHeartbeat, 30000);
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) refreshFromCloud();
+            if (!document.hidden) { refreshFromCloud(); sendHeartbeat(); }
         });
     }
 

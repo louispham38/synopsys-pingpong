@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synopsys Ping Pong VN07 Club - Bảng Xếp Hạng</title>
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=15">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
@@ -284,6 +284,27 @@
                 <div class="challenge-chat-layout">
                     <!-- Challenge Panel -->
                     <div class="challenge-panel" id="challengeSection">
+                        <!-- Direct Match Submission -->
+                        <div class="direct-match-section user-only" style="display:none;">
+                            <h3><i class="fas fa-pen-to-square"></i> Nhập Kết Quả Trực Tiếp</h3>
+                            <form id="directMatchForm" class="direct-match-form">
+                                <div class="dm-players">
+                                    <select id="dmPlayerA" class="form-input"><option value="">-- Tay vợt A --</option></select>
+                                    <span class="dm-vs">VS</span>
+                                    <select id="dmPlayerB" class="form-input"><option value="">-- Tay vợt B --</option></select>
+                                </div>
+                                <div class="dm-sets" id="dmSets">
+                                    <div class="csf-set"><span class="csf-set-label">Set 1</span><input type="number" class="dm-score-a" min="0" max="30" placeholder="0"><span>-</span><input type="number" class="dm-score-b" min="0" max="30" placeholder="0"></div>
+                                    <div class="csf-set"><span class="csf-set-label">Set 2</span><input type="number" class="dm-score-a" min="0" max="30" placeholder="0"><span>-</span><input type="number" class="dm-score-b" min="0" max="30" placeholder="0"></div>
+                                    <div class="csf-set"><span class="csf-set-label">Set 3</span><input type="number" class="dm-score-a" min="0" max="30" placeholder="0"><span>-</span><input type="number" class="dm-score-b" min="0" max="30" placeholder="0"></div>
+                                </div>
+                                <div class="dm-actions">
+                                    <button type="button" class="btn-add-set" id="dmAddSet"><i class="fas fa-plus"></i> Set</button>
+                                    <button type="submit" class="btn-submit-score"><i class="fas fa-paper-plane"></i> Gửi chờ Admin duyệt</button>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Challenge Create -->
                         <div class="challenge-create">
                             <h3><i class="fas fa-table-tennis-paddle-ball"></i> Gửi Thách Đấu</h3>
                             <form id="challengeCreateForm" class="challenge-form user-only" style="display:none;">
@@ -622,6 +643,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=21"></script>
+    <script src="app.js?v=22"></script>
 </body>
 </html>
