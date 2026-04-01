@@ -1773,9 +1773,157 @@ class UI {
                 <div class="announce-fun-title">Kèo Vui Áp Dụng:</div>
                 <div class="announce-fun-tags">${selectedFun.map(f => `<span class="announce-fun-tag">${f}</span>`).join('')}</div>
             </div>` : ''}
+            <div class="announce-action">
+                <button class="btn-enter-score" id="btnAnnounceScore"><i class="fas fa-pen-to-square"></i> Nhập Kết Quả Trận Này</button>
+            </div>
             <div class="announce-footer">Synopsys Ping Pong VN07 Club 🏓</div>
         `;
+
+        this._announcePlayerA = pA;
+        this._announcePlayerB = pB;
+        this._announceFunHandicaps = selectedFun;
+
         document.getElementById('announceModal').style.display = 'flex';
+
+        document.getElementById('btnAnnounceScore').addEventListener('click', () => {
+            this._showAnnounceScoreInput(pA, pB, selectedFun);
+        });
+    }
+
+    _showAnnounceScoreInput(pA, pB, funHandicaps) {
+        const content = document.getElementById('announceContent');
+        content.innerHTML = `
+            <div class="announce-header">
+                <i class="fas fa-pen-to-square"></i>
+                <h2>NHẬP KẾT QUẢ</h2>
+            </div>
+            <div class="announce-players">
+                <div class="announce-p"><div class="announce-name">${pA.name}</div><div class="announce-rating">${pA.rating} pts</div></div>
+                <div class="announce-vs">VS</div>
+                <div class="announce-p"><div class="announce-name">${pB.name}</div><div class="announce-rating">${pB.rating} pts</div></div>
+            </div>
+            <div class="announce-score-input">
+                <div class="asi-sets" id="asiSets">
+                    ${[1,2,3].map(i => `<div class="asi-set">
+                        <span class="asi-label">Set ${i}</span>
+                        <input type="number" class="asi-a" min="0" max="30" placeholder="0">
+                        <span class="asi-dash">-</span>
+                        <input type="number" class="asi-b" min="0" max="30" placeholder="0">
+                    </div>`).join('')}
+                </div>
+                <div class="asi-actions">
+                    <button class="btn-add-set" id="asiAddSet"><i class="fas fa-plus"></i> Thêm Set</button>
+                    <button class="btn-submit-result" id="asiSubmit"><i class="fas fa-check-circle"></i> Xác Nhận Kết Quả</button>
+                </div>
+            </div>
+            <div class="announce-footer">Synopsys Ping Pong VN07 Club 🏓</div>
+        `;
+
+        document.getElementById('asiAddSet').addEventListener('click', () => {
+            const setsDiv = document.getElementById('asiSets');
+            const count = setsDiv.querySelectorAll('.asi-set').length;
+            if (count >= 7) { this.showToast('Tối đa 7 set!', 'info'); return; }
+            const el = document.createElement('div');
+            el.className = 'asi-set';
+            el.innerHTML = `<span class="asi-label">Set ${count + 1}</span>
+                <input type="number" class="asi-a" min="0" max="30" placeholder="0">
+                <span class="asi-dash">-</span>
+                <input type="number" class="asi-b" min="0" max="30" placeholder="0">
+                <button type="button" class="asi-remove" title="Xóa set"><i class="fas fa-times"></i></button>`;
+            el.querySelector('.asi-remove').addEventListener('click', () => el.remove());
+            setsDiv.appendChild(el);
+        });
+
+        document.getElementById('asiSubmit').addEventListener('click', () => {
+            const setEls = document.querySelectorAll('#asiSets .asi-set');
+            const sets = [];
+            let valid = true;
+            setEls.forEach(el => {
+                const a = parseInt(el.querySelector('.asi-a').value) || 0;
+                const b = parseInt(el.querySelector('.asi-b').value) || 0;
+                if (a === 0 && b === 0) valid = false;
+                sets.push({ scoreA: a, scoreB: b });
+            });
+            if (!valid || sets.length < 1) { this.showToast('Nhập đầy đủ tỉ số các set!', 'error'); return; }
+
+            const session = this.auth.getSession();
+            const submitter = session ? session.username : 'guest';
+            const result = this.state.createDirectMatch(pA.id, pB.id, sets, submitter);
+            if (result.error) { this.showToast(result.error, 'error'); return; }
+
+            this._showAnnounceResult(pA, pB, sets, funHandicaps);
+            this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
+        });
+    }
+
+    _showAnnounceResult(pA, pB, sets, funHandicaps) {
+        let setsA = 0, setsB = 0;
+        sets.forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
+        const winnerIsA = setsA > setsB;
+        const winner = winnerIsA ? pA : pB;
+        const loser = winnerIsA ? pB : pA;
+        const setsW = winnerIsA ? setsA : setsB;
+        const setsL = winnerIsA ? setsB : setsA;
+        const eloChange = this.state.calculateElo(pA.rating, pB.rating, winnerIsA ? 1 : 0);
+        const winnerChange = winnerIsA ? eloChange : -eloChange;
+        const loserChange = winnerIsA ? -eloChange : eloChange;
+
+        const content = document.getElementById('announceContent');
+        content.innerHTML = `
+            <div class="announce-header result-header">
+                <i class="fas fa-trophy"></i>
+                <h2>KẾT QUẢ TRẬN ĐẤU</h2>
+            </div>
+            <div class="result-winner">
+                <div class="result-crown"><i class="fas fa-crown"></i></div>
+                <div class="result-winner-name">${winner.name}</div>
+                <div class="result-winner-badge">CHIẾN THẮNG!</div>
+            </div>
+            <div class="result-score-big">
+                <div class="result-player ${winnerIsA ? 'result-win' : 'result-lose'}">
+                    <div class="result-pname">${pA.name}</div>
+                    <div class="result-prating">${pA.rating} pts</div>
+                </div>
+                <div class="result-sets-display">
+                    <div class="result-sets-num">${setsA} - ${setsB}</div>
+                    <div class="result-sets-label">SETS</div>
+                </div>
+                <div class="result-player ${!winnerIsA ? 'result-win' : 'result-lose'}">
+                    <div class="result-pname">${pB.name}</div>
+                    <div class="result-prating">${pB.rating} pts</div>
+                </div>
+            </div>
+            <div class="result-detail-sets">
+                ${sets.map((s, i) => {
+                    const aWin = s.scoreA > s.scoreB;
+                    return `<div class="result-set-row">
+                        <span class="rsr-label">Set ${i + 1}</span>
+                        <span class="rsr-score ${aWin ? 'rsr-win' : ''}">${s.scoreA}</span>
+                        <span class="rsr-dash">:</span>
+                        <span class="rsr-score ${!aWin ? 'rsr-win' : ''}">${s.scoreB}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+            <div class="result-elo-change">
+                <div class="result-elo-item result-elo-up">
+                    <span>${winner.name}</span>
+                    <span class="elo-delta elo-plus">+${Math.abs(winnerChange)} pts</span>
+                </div>
+                <div class="result-elo-item result-elo-down">
+                    <span>${loser.name}</span>
+                    <span class="elo-delta elo-minus">${loserChange} pts</span>
+                </div>
+            </div>
+            ${funHandicaps && funHandicaps.length > 0 ? `
+            <div class="announce-fun">
+                <div class="announce-fun-title">Kèo Vui Áp Dụng:</div>
+                <div class="announce-fun-tags">${funHandicaps.map(f => `<span class="announce-fun-tag">${f}</span>`).join('')}</div>
+            </div>` : ''}
+            <div class="result-pending-note">
+                <i class="fas fa-hourglass-half"></i> Chờ Admin duyệt để ghi nhận chính thức
+            </div>
+            <div class="announce-footer">Synopsys Ping Pong VN07 Club 🏓</div>
+        `;
     }
 
     getHandicap(diff) {

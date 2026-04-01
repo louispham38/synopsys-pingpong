@@ -2446,6 +2446,108 @@ body {
     font-weight: 500;
 }
 
+.announce-action {
+    padding: 16px 24px;
+}
+.btn-enter-score {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--info), #2563eb);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-enter-score:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.btn-enter-score i { margin-right: 8px; }
+
+.announce-score-input { padding: 16px 24px; }
+.asi-sets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.asi-set {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    background: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm);
+}
+.asi-label { font-size: 12px; font-weight: 600; color: var(--text-muted); width: 45px; text-align: left; }
+.asi-a, .asi-b {
+    width: 56px; text-align: center; padding: 8px 4px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-input); color: var(--text); font-size: 16px; font-weight: 700;
+}
+.asi-a:focus, .asi-b:focus { border-color: var(--primary); outline: none; }
+.asi-dash { font-weight: 700; color: var(--text-muted); }
+.asi-remove {
+    background: none; border: none; color: var(--danger); cursor: pointer;
+    font-size: 14px; padding: 4px; opacity: 0.6;
+}
+.asi-remove:hover { opacity: 1; }
+.asi-actions { display: flex; gap: 8px; justify-content: center; }
+.btn-submit-result {
+    padding: 10px 24px; border: none; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-submit-result:hover { filter: brightness(1.15); }
+.btn-submit-result i { margin-right: 6px; }
+
+.result-header { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
+.result-winner { padding: 20px 24px 12px; text-align: center; }
+.result-crown { font-size: 36px; color: var(--accent); margin-bottom: 4px; }
+.result-winner-name { font-size: 24px; font-weight: 800; color: var(--text); }
+.result-winner-badge {
+    display: inline-block; margin-top: 6px;
+    padding: 4px 18px; border-radius: 20px;
+    background: linear-gradient(135deg, var(--accent), #d97706);
+    color: #000; font-size: 13px; font-weight: 800; letter-spacing: 1px;
+}
+.result-score-big {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; padding: 16px 24px;
+}
+.result-player { flex: 1; text-align: center; }
+.result-pname { font-size: 16px; font-weight: 700; }
+.result-prating { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.result-win .result-pname { color: var(--success); }
+.result-lose .result-pname { color: var(--text-secondary); }
+.result-sets-display { text-align: center; }
+.result-sets-num { font-size: 36px; font-weight: 900; color: var(--accent); letter-spacing: 4px; }
+.result-sets-label { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; }
+
+.result-detail-sets {
+    padding: 12px 24px; display: flex; flex-direction: column; gap: 4px;
+    border-top: 1px solid var(--border);
+}
+.result-set-row {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 14px; padding: 4px 0;
+}
+.rsr-label { font-size: 11px; color: var(--text-muted); width: 40px; text-align: right; }
+.rsr-score { font-weight: 700; width: 28px; text-align: center; color: var(--text-secondary); }
+.rsr-score.rsr-win { color: var(--success); font-size: 16px; }
+.rsr-dash { color: var(--text-muted); }
+
+.result-elo-change {
+    padding: 14px 24px; display: flex; gap: 16px; justify-content: center;
+    border-top: 1px solid var(--border);
+}
+.result-elo-item {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 13px; font-weight: 600;
+}
+.elo-delta { padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 13px; }
+.elo-plus { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.elo-minus { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+.result-pending-note {
+    padding: 10px 24px; font-size: 12px; color: var(--warning);
+    background: rgba(245, 158, 11, 0.08); text-align: center;
+    border-top: 1px solid var(--border);
+}
+.result-pending-note i { margin-right: 6px; }
+
 .announce-footer {
     padding: 16px;
     font-size: 13px;
