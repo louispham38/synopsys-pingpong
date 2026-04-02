@@ -498,9 +498,31 @@ class AppState {
     deleteMatch(matchId) {
         const idx = this.matches.findIndex(m => m.id === matchId);
         if (idx === -1) return false;
+        const m = this.matches[idx];
+
+        const playerA = this.getPlayer(m.playerAId);
+        const playerB = this.getPlayer(m.playerBId);
+        if (playerA) {
+            playerA.rating = Math.max(100, playerA.rating - m.ratingChangeA);
+            if (m.winnerId === m.playerAId) { playerA.wins = Math.max(0, playerA.wins - 1); }
+            else { playerA.losses = Math.max(0, playerA.losses - 1); }
+            if (playerA.recentResults.length) playerA.recentResults.pop();
+            this.updateStreak(playerA);
+            playerA.lastDelta = 0;
+        }
+        if (playerB) {
+            playerB.rating = Math.max(100, playerB.rating - m.ratingChangeB);
+            if (m.winnerId === m.playerBId) { playerB.wins = Math.max(0, playerB.wins - 1); }
+            else { playerB.losses = Math.max(0, playerB.losses - 1); }
+            if (playerB.recentResults.length) playerB.recentResults.pop();
+            this.updateStreak(playerB);
+            playerB.lastDelta = 0;
+        }
+
         this.matches.splice(idx, 1);
+        this.savePlayers();
         this.saveMatches();
-        return true;
+        return m;
     }
 
     recordMatch(playerAId, playerBId, sets, date, funHandicaps) {
@@ -1723,11 +1745,17 @@ class UI {
 
         container.querySelectorAll('.btn-delete-match').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (!confirm('Xóa trận đấu này? (Điểm sẽ KHÔNG tự động hoàn lại)')) return;
-                this.state.deleteMatch(parseInt(btn.dataset.matchId));
+                if (!confirm('Xóa trận đấu này và hoàn lại điểm cho cả 2 tay vợt?')) return;
+                const deleted = this.state.deleteMatch(parseInt(btn.dataset.matchId));
+                if (deleted) {
+                    const pA = this.state.getPlayer(deleted.playerAId);
+                    const pB = this.state.getPlayer(deleted.playerBId);
+                    const infoA = pA ? `${pA.name}: ${pA.rating} pts` : '';
+                    const infoB = pB ? `${pB.name}: ${pB.rating} pts` : '';
+                    this.showToast(`Đã xóa & hoàn điểm: ${infoA}, ${infoB}`, 'success');
+                }
                 this.render();
                 this.renderAdminHistory();
-                this.showToast('Đã xóa trận đấu', 'info');
             });
         });
     }
