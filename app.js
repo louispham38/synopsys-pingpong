@@ -37,7 +37,7 @@ class SyncManager {
 
     async save(data) {
         if (!this.enabled) return;
-        this._pendingSave = data;
+        this._pendingSave = this._pendingSave ? Object.assign(this._pendingSave, data) : { ...data };
         if (this._saving) return;
         this._saving = true;
         try {
