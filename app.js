@@ -44,16 +44,23 @@ class SyncManager {
             while (this._pendingSave) {
                 const payload = this._pendingSave;
                 this._pendingSave = null;
-                const res = await fetch(this.apiUrl, {
-                    method: 'POST',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(payload),
-                });
-                if (!res.ok) console.warn('[Sync] save HTTP', res.status);
+                try {
+                    const res = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(payload),
+                    });
+                    if (!res.ok) {
+                        console.warn('[Sync] save HTTP', res.status);
+                        this._pendingSave = this._pendingSave ? Object.assign(this._pendingSave, payload) : payload;
+                    }
+                } catch (fetchErr) {
+                    console.warn('[Sync] save failed, will retry:', fetchErr);
+                    this._pendingSave = this._pendingSave ? Object.assign(this._pendingSave, payload) : payload;
+                    break;
+                }
             }
-        } catch (e) {
-            console.warn('[Sync] save failed:', e);
         } finally {
             this._saving = false;
         }
@@ -149,21 +156,31 @@ class Auth {
         const cloudMap = new Map(users.map(u => [u.username, { ...u }]));
         const localMap = new Map(this._users.map(u => [u.username, u]));
 
+        let hasLocalOnly = false;
+        let hasFieldFix = false;
+
         localMap.forEach((local, key) => {
-            if (!cloudMap.has(key)) cloudMap.set(key, local);
-            else {
+            if (!cloudMap.has(key)) {
+                cloudMap.set(key, local);
+                hasLocalOnly = true;
+            } else {
                 const merged = cloudMap.get(key);
-                if (local.password && !merged.password) merged.password = local.password;
-                if (local.playerId && !merged.playerId) merged.playerId = local.playerId;
-                if (local.displayName && !merged.displayName) merged.displayName = local.displayName;
-                if (local.reputation !== undefined && merged.reputation === undefined) merged.reputation = local.reputation;
-                if (local.role && !merged.role) merged.role = local.role;
+                if (local.password && !merged.password) { merged.password = local.password; hasFieldFix = true; }
+                if (local.playerId && !merged.playerId) { merged.playerId = local.playerId; hasFieldFix = true; }
+                if (local.displayName && !merged.displayName) { merged.displayName = local.displayName; hasFieldFix = true; }
+                if (local.reputation !== undefined && merged.reputation === undefined) { merged.reputation = local.reputation; hasFieldFix = true; }
+                if (local.role && !merged.role) { merged.role = local.role; hasFieldFix = true; }
             }
         });
 
         this._users = Array.from(cloudMap.values());
         localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
         this._ensureAdmin();
+
+        if (hasLocalOnly || hasFieldFix) {
+            console.log('[Auth] Merge detected local-only data, pushing back to cloud');
+            sync.save({ users: this._users });
+        }
     }
 
     _ensureAdmin() {
