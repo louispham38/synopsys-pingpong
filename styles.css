@@ -3451,6 +3451,18 @@ body {
     transition: all 0.2s;
 }
 .btn-reject-score:hover { background: rgba(239, 68, 68, 0.25); }
+.btn-delete-challenge {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(100, 116, 139, 0.1);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-delete-challenge:hover { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
 
 @media (max-width: 768px) {
     .csf-set input[type="number"] { width: 42px; padding: 5px 4px; }

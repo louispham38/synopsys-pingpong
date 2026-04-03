@@ -692,6 +692,14 @@ class AppState {
         this._saveChallenges();
     }
 
+    deleteChallenge(challengeId) {
+        const idx = this.challenges.findIndex(c => c.id === challengeId);
+        if (idx === -1) return false;
+        this.challenges.splice(idx, 1);
+        this._saveChallenges();
+        return true;
+    }
+
     createDirectMatch(playerAId, playerBId, sets, submittedBy) {
         const playerA = this.getPlayer(playerAId);
         const playerB = this.getPlayer(playerBId);
@@ -1559,6 +1567,7 @@ class UI {
                     <div class="achi-review-actions">
                         <button class="btn-approve-score" data-id="${c.id}"><i class="fas fa-check-circle"></i> Duyệt & Ghi nhận</button>
                         <button class="btn-reject-score" data-id="${c.id}"><i class="fas fa-redo"></i> Trả lại</button>
+                        <button class="btn-delete-challenge" data-id="${c.id}"><i class="fas fa-trash"></i> Xóa</button>
                     </div>
                 </div>`;
             }).join('');
@@ -1582,6 +1591,7 @@ class UI {
                     <div class="achi-meta">
                         <span class="achi-time">${new Date(c.respondedAt || c.createdAt).toLocaleString('vi-VN')}</span>
                         <span class="badge badge-accepted">Chờ user nhập điểm</span>
+                        <button class="btn-delete-challenge" data-id="${c.id}"><i class="fas fa-trash"></i> Xóa</button>
                     </div>
                 </div>`;
             }).join('');
@@ -1621,6 +1631,15 @@ class UI {
                 this.state.rejectChallengeScore(cId);
                 this.renderAdminChallenges();
                 this.showToast('Đã trả lại, user có thể nhập lại kết quả.', 'info');
+            });
+        });
+        container.querySelectorAll('.btn-delete-challenge').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm('Xóa thách đấu / kết quả này khỏi danh sách?')) return;
+                this.state.deleteChallenge(parseInt(btn.dataset.id));
+                this.renderAdminChallenges();
+                this.renderChallenges();
+                this.showToast('Đã xóa khỏi danh sách', 'info');
             });
         });
     }
