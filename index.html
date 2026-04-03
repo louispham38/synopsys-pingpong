@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synopsys Ping Pong VN07 Club - Bảng Xếp Hạng</title>
-    <link rel="stylesheet" href="styles.css?v=17">
+    <link rel="stylesheet" href="styles.css?v=18">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
@@ -137,6 +137,9 @@
             </button>
             <button class="tab-btn" data-tab="guide">
                 <i class="fas fa-book-open"></i> Hướng Dẫn & Kèo Chấp
+            </button>
+            <button class="tab-btn user-only" data-tab="profile" style="display:none;">
+                <i class="fas fa-id-card"></i> Tài Khoản
             </button>
             <button class="tab-btn admin-only" data-tab="admin" style="display:none;">
                 <i class="fas fa-gear"></i> Quản Lý
@@ -537,6 +540,55 @@
                 </div>
             </section>
 
+            <!-- PROFILE / DASHBOARD TAB -->
+            <section id="tab-profile" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-id-card"></i> Tài Khoản Cá Nhân</h2>
+                </div>
+                <div class="profile-layout">
+                    <!-- Profile Card -->
+                    <div class="profile-card profile-info-card">
+                        <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
+                        <div class="profile-details">
+                            <h3 id="profileDisplayName">-</h3>
+                            <div class="profile-meta">
+                                <span><i class="fas fa-at"></i> <span id="profileUsername">-</span></span>
+                                <span><i class="fas fa-star"></i> Uy tín: <span id="profileRep">-</span></span>
+                            </div>
+                            <div class="profile-linked" id="profileLinked"></div>
+                        </div>
+                    </div>
+                    <!-- Edit Display Name -->
+                    <div class="profile-card">
+                        <h3><i class="fas fa-signature"></i> Tên Hiển Thị</h3>
+                        <div class="profile-form">
+                            <input type="text" id="profileEditName" class="form-input" placeholder="Tên hiển thị mới">
+                            <button class="btn-profile-save" id="btnSaveName"><i class="fas fa-save"></i> Lưu</button>
+                        </div>
+                    </div>
+                    <!-- Change Password -->
+                    <div class="profile-card">
+                        <h3><i class="fas fa-lock"></i> Đổi Mật Khẩu</h3>
+                        <div class="profile-form profile-form-col">
+                            <input type="password" id="profileOldPass" class="form-input" placeholder="Mật khẩu hiện tại">
+                            <input type="password" id="profileNewPass" class="form-input" placeholder="Mật khẩu mới (6+ ký tự)">
+                            <input type="password" id="profileNewPassConfirm" class="form-input" placeholder="Xác nhận mật khẩu mới">
+                            <button class="btn-profile-save" id="btnChangePass"><i class="fas fa-key"></i> Đổi Mật Khẩu</button>
+                        </div>
+                    </div>
+                    <!-- Personal Stats -->
+                    <div class="profile-card profile-card-full">
+                        <h3><i class="fas fa-chart-line"></i> Thống Kê Cá Nhân</h3>
+                        <div class="profile-stats" id="profileStats"></div>
+                    </div>
+                    <!-- Personal Match History -->
+                    <div class="profile-card profile-card-full">
+                        <h3><i class="fas fa-clock-rotate-left"></i> Lịch Sử Thi Đấu Của Tôi</h3>
+                        <div class="profile-history" id="profileHistory"></div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ADMIN TAB -->
             <section id="tab-admin" class="tab-content">
                 <div class="section-header">
@@ -643,6 +695,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=28"></script>
 </body>
 </html>

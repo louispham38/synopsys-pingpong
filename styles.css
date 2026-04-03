@@ -2556,6 +2556,111 @@ body {
 }
 
 /* ============================================================
+   Profile Dashboard
+   ============================================================ */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.profile-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+}
+.profile-card h3 { margin: 0 0 14px; font-size: 15px; color: var(--text); }
+.profile-card h3 i { color: var(--primary-light); margin-right: 8px; }
+.profile-card-full { grid-column: 1 / -1; }
+
+.profile-info-card {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, var(--bg-card) 60%, rgba(108, 60, 224, 0.08));
+}
+.profile-avatar { font-size: 52px; color: var(--primary-light); opacity: 0.8; }
+.profile-details { flex: 1; }
+.profile-details h3 { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+.profile-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-secondary); }
+.profile-meta i { width: 14px; margin-right: 4px; color: var(--text-muted); }
+.profile-linked {
+    margin-top: 8px; font-size: 13px; color: var(--accent);
+    padding: 6px 12px; background: rgba(245, 158, 11, 0.08);
+    border-radius: var(--radius-sm); display: inline-block;
+}
+.profile-linked i { margin-right: 6px; }
+
+.profile-form { display: flex; gap: 10px; align-items: center; }
+.profile-form-col { flex-direction: column; align-items: stretch; }
+.btn-profile-save {
+    padding: 10px 18px; border: none; border-radius: var(--radius-sm);
+    background: var(--primary); color: white;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+}
+.btn-profile-save:hover { background: var(--primary-light); }
+.btn-profile-save i { margin-right: 6px; }
+
+.pstat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px; margin-bottom: 12px;
+}
+.pstat-item {
+    background: var(--bg); padding: 14px; border-radius: var(--radius-sm);
+    text-align: center; border: 1px solid var(--border);
+}
+.pstat-num { font-size: 24px; font-weight: 800; color: var(--text); }
+.pstat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.pstat-win .pstat-num { color: var(--success); }
+.pstat-lose .pstat-num { color: var(--danger); }
+.pstat-highlight {
+    padding: 10px 14px; background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.15); border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--text-secondary);
+}
+.pstat-highlight i { color: var(--accent); margin-right: 8px; }
+
+.profile-history { display: flex; flex-direction: column; gap: 4px; max-height: 450px; overflow-y: auto; }
+.ph-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    background: var(--bg); border-left: 3px solid transparent;
+    transition: background 0.15s;
+}
+.ph-item:hover { background: var(--bg-card-hover); }
+.ph-win { border-left-color: var(--success); }
+.ph-lose { border-left-color: var(--danger); }
+.ph-result {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; flex-shrink: 0;
+}
+.ph-win .ph-result { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.ph-lose .ph-result { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+.ph-details { flex: 1; min-width: 0; }
+.ph-opponent { font-size: 13px; font-weight: 600; }
+.ph-score { font-size: 12px; color: var(--text-secondary); }
+.ph-sets { color: var(--text-muted); font-size: 11px; }
+.ph-change {
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+    padding: 2px 8px; border-radius: 8px;
+}
+.ph-plus { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+.ph-minus { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+.ph-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.text-muted { color: var(--text-muted); font-size: 13px; }
+
+@media (max-width: 768px) {
+    .profile-layout { grid-template-columns: 1fr; }
+    .profile-info-card { flex-direction: column; text-align: center; }
+    .profile-form { flex-direction: column; }
+    .pstat-grid { grid-template-columns: repeat(3, 1fr); }
+    .ph-date { display: none; }
+}
+
+/* ============================================================
    Admin Panel
    ============================================================ */
 .admin-layout {

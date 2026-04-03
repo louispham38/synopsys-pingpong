@@ -895,6 +895,7 @@ class UI {
         this.bindHandicapCalc();
         this.bindChat();
         this.bindChallenges();
+        this.bindProfile();
         this.bindAdmin();
         this.bindAnnounce();
         this.populateSelects();
@@ -1428,6 +1429,121 @@ class UI {
                 eloToggle.classList.toggle('open', !open);
             });
         }
+    }
+
+    bindProfile() {
+        const session = this.auth.getSession();
+        if (!session || session.role === 'guest') return;
+
+        document.getElementById('btnSaveName').addEventListener('click', () => {
+            const newName = document.getElementById('profileEditName').value.trim();
+            if (!newName) { this.showToast('Nhập tên hiển thị!', 'error'); return; }
+            this.auth.updateUser(session.username, { displayName: newName });
+            document.getElementById('userName').textContent = newName;
+            this.showToast('Đã cập nhật tên hiển thị!', 'success');
+            this.renderProfile();
+            this.render();
+        });
+
+        document.getElementById('btnChangePass').addEventListener('click', async () => {
+            const oldPass = document.getElementById('profileOldPass').value;
+            const newPass = document.getElementById('profileNewPass').value;
+            const confirmPass = document.getElementById('profileNewPassConfirm').value;
+            if (!oldPass || !newPass) { this.showToast('Nhập đầy đủ thông tin!', 'error'); return; }
+            if (newPass.length < 6) { this.showToast('Mật khẩu mới tối thiểu 6 ký tự!', 'error'); return; }
+            if (newPass !== confirmPass) { this.showToast('Mật khẩu xác nhận không khớp!', 'error'); return; }
+            const user = this.auth.getUser(session.username);
+            const hashedOld = await hashPassword(oldPass);
+            if (user.password !== hashedOld && user.password !== oldPass) {
+                this.showToast('Mật khẩu hiện tại không đúng!', 'error'); return;
+            }
+            await this.auth.changePassword(session.username, newPass);
+            document.getElementById('profileOldPass').value = '';
+            document.getElementById('profileNewPass').value = '';
+            document.getElementById('profileNewPassConfirm').value = '';
+            this.showToast('Đã đổi mật khẩu thành công!', 'success');
+        });
+
+        this.renderProfile();
+    }
+
+    renderProfile() {
+        const session = this.auth.getSession();
+        if (!session || session.role === 'guest') return;
+        const user = this.auth.getUser(session.username);
+        if (!user) return;
+
+        document.getElementById('profileDisplayName').textContent = user.displayName;
+        document.getElementById('profileUsername').textContent = user.username;
+        document.getElementById('profileRep').innerHTML = this._renderStars(user.reputation !== undefined ? user.reputation : 5);
+        document.getElementById('profileEditName').value = user.displayName;
+
+        const linkedEl = document.getElementById('profileLinked');
+        const player = user.playerId ? this.state.getPlayer(user.playerId) : null;
+        if (player) {
+            linkedEl.innerHTML = `<i class="fas fa-table-tennis-paddle-ball"></i> ${player.name} — <strong>${player.rating}</strong> pts (${player.group})`;
+        } else {
+            linkedEl.innerHTML = '<span class="text-muted">Chưa liên kết tay vợt</span>';
+        }
+
+        const statsEl = document.getElementById('profileStats');
+        const historyEl = document.getElementById('profileHistory');
+
+        if (!player) {
+            statsEl.innerHTML = '<p class="text-muted">Liên kết tay vợt để xem thống kê.</p>';
+            historyEl.innerHTML = '<p class="text-muted">Liên kết tay vợt để xem lịch sử.</p>';
+            return;
+        }
+
+        const myMatches = this.state.matches.filter(m => m.playerAId === player.id || m.playerBId === player.id);
+        const wins = myMatches.filter(m => m.winnerId === player.id).length;
+        const losses = myMatches.length - wins;
+        const winRate = myMatches.length ? Math.round((wins / myMatches.length) * 100) : 0;
+
+        let totalGain = 0, totalLoss = 0, bestWin = null, worstLoss = null;
+        myMatches.forEach(m => {
+            const change = m.playerAId === player.id ? m.ratingChangeA : m.ratingChangeB;
+            if (change > 0) { totalGain += change; if (!bestWin || change > bestWin.change) bestWin = { match: m, change }; }
+            else { totalLoss += change; if (!worstLoss || change < worstLoss.change) worstLoss = { match: m, change }; }
+        });
+
+        statsEl.innerHTML = `
+            <div class="pstat-grid">
+                <div class="pstat-item"><div class="pstat-num">${myMatches.length}</div><div class="pstat-label">Trận đấu</div></div>
+                <div class="pstat-item pstat-win"><div class="pstat-num">${wins}</div><div class="pstat-label">Thắng</div></div>
+                <div class="pstat-item pstat-lose"><div class="pstat-num">${losses}</div><div class="pstat-label">Thua</div></div>
+                <div class="pstat-item"><div class="pstat-num">${winRate}%</div><div class="pstat-label">Tỉ lệ thắng</div></div>
+                <div class="pstat-item pstat-win"><div class="pstat-num">+${totalGain}</div><div class="pstat-label">Tổng điểm thắng</div></div>
+                <div class="pstat-item pstat-lose"><div class="pstat-num">${totalLoss}</div><div class="pstat-label">Tổng điểm thua</div></div>
+            </div>
+            ${bestWin ? `<div class="pstat-highlight">
+                <i class="fas fa-trophy"></i> Thắng ấn tượng nhất: <strong>+${bestWin.change} pts</strong> vs ${bestWin.match.playerAId === player.id ? bestWin.match.playerBName : bestWin.match.playerAName}
+            </div>` : ''}
+        `;
+
+        if (!myMatches.length) {
+            historyEl.innerHTML = '<p class="text-muted">Chưa có trận đấu nào.</p>';
+            return;
+        }
+
+        historyEl.innerHTML = myMatches.slice(0, 30).map(m => {
+            const isA = m.playerAId === player.id;
+            const opponent = isA ? m.playerBName : m.playerAName;
+            const won = m.winnerId === player.id;
+            const change = isA ? m.ratingChangeA : m.ratingChangeB;
+            const setsStr = m.sets.map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
+            const mySet = isA ? m.setsWonA : m.setsWonB;
+            const opSet = isA ? m.setsWonB : m.setsWonA;
+            return `<div class="ph-item ${won ? 'ph-win' : 'ph-lose'}">
+                <div class="ph-result">${won ? 'W' : 'L'}</div>
+                <div class="ph-details">
+                    <div class="ph-opponent">vs <strong>${opponent}</strong></div>
+                    <div class="ph-score">${mySet}-${opSet} <span class="ph-sets">(${setsStr})</span></div>
+                </div>
+                <div class="ph-change ${change > 0 ? 'ph-plus' : 'ph-minus'}">${change > 0 ? '+' : ''}${change}</div>
+                <div class="ph-date">${this.formatDate(m.date)}</div>
+            </div>`;
+        }).join('');
     }
 
     bindAdmin() {
@@ -2159,6 +2275,7 @@ class UI {
         this.renderTable();
         this.renderHistory();
         this.renderLeaderboards();
+        this.renderProfile();
     }
 
     renderStats() {
