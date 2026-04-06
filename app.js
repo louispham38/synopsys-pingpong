@@ -1196,6 +1196,9 @@ class UI {
                 if (!valid || sets.length < 1) { this.showToast('Nhập đầy đủ tỉ số các set!', 'error'); return; }
                 const result = this.state.createDirectMatch(aId, bId, sets, session.username);
                 if (result.error) { this.showToast(result.error, 'error'); return; }
+                const dmPA = this.state.getPlayer(aId);
+                const dmPB = this.state.getPlayer(bId);
+                if (dmPA && dmPB) this.showResultModal(dmPA, dmPB, sets, []);
                 this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
                 dmForm.reset();
                 document.getElementById('dmSets').innerHTML = [1,2,3].map(i =>
@@ -1409,8 +1412,12 @@ class UI {
                     sets.push({ scoreA: a, scoreB: b });
                 });
                 if (!valid || sets.length < 1) { this.showToast('Nhập đầy đủ tỉ số các set!', 'error'); return; }
+                const ch = this.state.challenges.find(c => c.id === cId);
                 const result = this.state.submitChallengeScore(cId, sets, session.username);
                 if (result) {
+                    const chPA = ch ? this.state.getPlayer(ch.fromPlayerId) : null;
+                    const chPB = ch ? this.state.getPlayer(ch.toPlayerId) : null;
+                    if (chPA && chPB) this.showResultModal(chPA, chPB, sets, []);
                     this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
                     this.renderChallenges();
                 }
@@ -2041,6 +2048,11 @@ class UI {
         });
     }
 
+    showResultModal(pA, pB, sets, funHandicaps) {
+        this._showAnnounceResult(pA, pB, sets, funHandicaps);
+        document.getElementById('announceModal').style.display = 'flex';
+    }
+
     _showAnnounceResult(pA, pB, sets, funHandicaps) {
         let setsA = 0, setsB = 0;
         sets.forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
@@ -2252,8 +2264,21 @@ class UI {
         const match = this.state.recordMatch(aId, bId, sets, date, funHandicaps);
         if (!match) { this.showToast('Lỗi khi lưu kết quả!', 'error'); return; }
 
-        const winner = match.winnerId === aId ? match.playerAName : match.playerBName;
-        this.showToast(`Đã lưu! ${winner} thắng!`, 'success');
+        const winnerName = match.winnerId === aId ? match.playerAName : match.playerBName;
+        const loserName = match.winnerId === aId ? match.playerBName : match.playerAName;
+        const setsW = match.winnerId === aId ? match.setsWonA : match.setsWonB;
+        const setsL = match.winnerId === aId ? match.setsWonB : match.setsWonA;
+        const changeW = match.winnerId === aId ? match.ratingChangeA : match.ratingChangeB;
+        const changeL = match.winnerId === aId ? match.ratingChangeB : match.ratingChangeA;
+        this.state.sendChat('system', 'Admin',
+            `${winnerName} thắng ${loserName} (${setsW}-${setsL}) | ${winnerName} ${changeW > 0 ? '+' : ''}${changeW} pts, ${loserName} ${changeL > 0 ? '+' : ''}${changeL} pts`,
+            'result');
+
+        const pA = this.state.getPlayer(aId);
+        const pB = this.state.getPlayer(bId);
+        if (pA && pB) this.showResultModal(pA, pB, sets, funHandicaps);
+
+        this.showToast(`Đã lưu! ${winnerName} thắng!`, 'success');
 
         document.getElementById('playerA').value = '';
         document.getElementById('playerB').value = '';
