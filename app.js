@@ -170,6 +170,11 @@ class Auth {
                 if (local.displayName && !merged.displayName) { merged.displayName = local.displayName; hasFieldFix = true; }
                 if (local.reputation !== undefined && merged.reputation === undefined) { merged.reputation = local.reputation; hasFieldFix = true; }
                 if (local.role && !merged.role) { merged.role = local.role; hasFieldFix = true; }
+                if (merged.needsSetup && local.password && !local.needsSetup) {
+                    merged.needsSetup = false;
+                    merged.password = local.password;
+                    hasFieldFix = true;
+                }
             }
         });
 
@@ -189,7 +194,7 @@ class Auth {
                 username: 'admin', password: null, displayName: 'Admin',
                 role: 'admin', reputation: 5, needsSetup: true,
             });
-            this._saveUsers();
+            localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(this._users));
         }
         this._users.forEach(u => {
             if (u.reputation === undefined) u.reputation = 5;
