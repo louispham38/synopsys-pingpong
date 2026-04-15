@@ -903,9 +903,137 @@ class UI {
         this.bindProfile();
         this.bindAdmin();
         this.bindAnnounce();
+        this.bindPlayerStatsModal();
         this.populateSelects();
         this.render();
         document.getElementById('matchDate').valueAsDate = new Date();
+    }
+
+    bindPlayerStatsModal() {
+        document.getElementById('rankingBody').addEventListener('click', e => {
+            const nameEl = e.target.closest('.player-clickable');
+            if (!nameEl) return;
+            const playerId = parseInt(nameEl.dataset.playerId);
+            if (playerId) this.showPlayerStats(playerId);
+        });
+        document.getElementById('closePlayerStats').addEventListener('click', () => {
+            document.getElementById('playerStatsModal').style.display = 'none';
+        });
+        document.getElementById('playerStatsModal').addEventListener('click', e => {
+            if (e.target.id === 'playerStatsModal') document.getElementById('playerStatsModal').style.display = 'none';
+        });
+    }
+
+    showPlayerStats(playerId) {
+        const player = this.state.getPlayer(playerId);
+        if (!player) return;
+
+        const allSorted = this.state.getSortedPlayers();
+        const rank = allSorted.findIndex(p => p.id === playerId) + 1;
+        const form = this.getFormDots(player);
+        const formLabel = this.getFormLabel(player);
+
+        const myMatches = this.state.matches.filter(m => m.playerAId === playerId || m.playerBId === playerId);
+        const wins = myMatches.filter(m => m.winnerId === playerId).length;
+        const losses = myMatches.length - wins;
+        const winRate = myMatches.length ? Math.round((wins / myMatches.length) * 100) : 0;
+
+        let totalGain = 0, totalLoss = 0, bestWin = null, worstLoss = null;
+        let currentStreak = 0, bestStreak = 0;
+        myMatches.slice().reverse().forEach(m => {
+            const change = m.playerAId === playerId ? m.ratingChangeA : m.ratingChangeB;
+            const won = m.winnerId === playerId;
+            if (change > 0) { totalGain += change; if (!bestWin || change > bestWin.change) bestWin = { match: m, change }; }
+            else { totalLoss += change; if (!worstLoss || change < worstLoss.change) worstLoss = { match: m, change }; }
+            if (won) { currentStreak++; if (currentStreak > bestStreak) bestStreak = currentStreak; }
+            else { currentStreak = 0; }
+        });
+
+        const opponents = {};
+        myMatches.forEach(m => {
+            const oppId = m.playerAId === playerId ? m.playerBId : m.playerAId;
+            const oppName = m.playerAId === playerId ? m.playerBName : m.playerAName;
+            if (!opponents[oppId]) opponents[oppId] = { name: oppName, wins: 0, losses: 0 };
+            if (m.winnerId === playerId) opponents[oppId].wins++;
+            else opponents[oppId].losses++;
+        });
+        const h2hList = Object.values(opponents).sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses)).slice(0, 5);
+
+        const userMap = {};
+        this.auth.getUsers().forEach(u => { if (u.playerId) userMap[u.playerId] = u; });
+        const linkedUser = userMap[playerId];
+
+        const content = document.getElementById('playerStatsContent');
+        content.innerHTML = `
+            <div class="ps-header">
+                <div class="ps-avatar">${player.name.charAt(0)}</div>
+                <div class="ps-info">
+                    <h2 class="ps-name">${player.name}</h2>
+                    <div class="ps-meta">
+                        <span class="group-badge badge-${player.group.toLowerCase()}">${player.group}</span>
+                        <span class="ps-rank"><i class="fas fa-trophy"></i> Hạng ${rank}</span>
+                        ${linkedUser ? `<span class="ps-linked"><i class="fas fa-user"></i> ${linkedUser.displayName}</span>` : ''}
+                    </div>
+                    <div class="ps-rating-big">${player.rating} <small>pts</small></div>
+                </div>
+            </div>
+            <div class="ps-stats-grid">
+                <div class="pstat-item"><div class="pstat-num">${myMatches.length}</div><div class="pstat-label">Trận đấu</div></div>
+                <div class="pstat-item pstat-win"><div class="pstat-num">${wins}</div><div class="pstat-label">Thắng</div></div>
+                <div class="pstat-item pstat-lose"><div class="pstat-num">${losses}</div><div class="pstat-label">Thua</div></div>
+                <div class="pstat-item"><div class="pstat-num">${winRate}%</div><div class="pstat-label">Tỉ lệ thắng</div></div>
+                <div class="pstat-item pstat-win"><div class="pstat-num">+${totalGain}</div><div class="pstat-label">Điểm thắng</div></div>
+                <div class="pstat-item pstat-lose"><div class="pstat-num">${totalLoss}</div><div class="pstat-label">Điểm thua</div></div>
+            </div>
+            <div class="ps-highlights">
+                ${bestWin ? `<div class="ps-hl-item ps-hl-good"><i class="fas fa-medal"></i> Thắng ấn tượng: <strong>+${bestWin.change}</strong> vs ${bestWin.match.playerAId === playerId ? bestWin.match.playerBName : bestWin.match.playerAName}</div>` : ''}
+                ${worstLoss ? `<div class="ps-hl-item ps-hl-bad"><i class="fas fa-heart-broken"></i> Thua đau nhất: <strong>${worstLoss.change}</strong> vs ${worstLoss.match.playerAId === playerId ? worstLoss.match.playerBName : worstLoss.match.playerAName}</div>` : ''}
+                ${bestStreak > 1 ? `<div class="ps-hl-item ps-hl-good"><i class="fas fa-fire"></i> Chuỗi thắng tốt nhất: <strong>${bestStreak}</strong> trận</div>` : ''}
+            </div>
+            <div class="ps-form-section">
+                <h3><i class="fas fa-chart-line"></i> Phong độ gần đây</h3>
+                <div class="ps-form-display">${form} <span class="form-label ${formLabel.cls}">${formLabel.text}</span></div>
+            </div>
+            ${h2hList.length ? `
+            <div class="ps-h2h-section">
+                <h3><i class="fas fa-users"></i> Đối thủ thường gặp</h3>
+                <div class="ps-h2h-list">
+                    ${h2hList.map(o => {
+                        const total = o.wins + o.losses;
+                        const wr = Math.round((o.wins / total) * 100);
+                        return `<div class="ps-h2h-item">
+                            <span class="ps-h2h-name">${o.name}</span>
+                            <span class="ps-h2h-record">${o.wins}W - ${o.losses}L</span>
+                            <div class="ps-h2h-bar"><div class="ps-h2h-fill ${wr >= 50 ? 'ps-h2h-good' : 'ps-h2h-bad'}" style="width:${wr}%"></div></div>
+                            <span class="ps-h2h-pct">${wr}%</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>` : ''}
+            <div class="ps-history-section">
+                <h3><i class="fas fa-history"></i> Lịch sử thi đấu gần đây</h3>
+                ${myMatches.length === 0 ? '<p class="text-muted">Chưa có trận đấu nào.</p>' :
+                    myMatches.slice(0, 20).map(m => {
+                        const isA = m.playerAId === playerId;
+                        const opponent = isA ? m.playerBName : m.playerAName;
+                        const won = m.winnerId === playerId;
+                        const change = isA ? m.ratingChangeA : m.ratingChangeB;
+                        const setsStr = m.sets.map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
+                        const mySet = isA ? m.setsWonA : m.setsWonB;
+                        const opSet = isA ? m.setsWonB : m.setsWonA;
+                        return `<div class="ph-item ${won ? 'ph-win' : 'ph-lose'}">
+                            <div class="ph-result">${won ? 'W' : 'L'}</div>
+                            <div class="ph-details">
+                                <div class="ph-opponent">vs <strong>${opponent}</strong></div>
+                                <div class="ph-score">${mySet}-${opSet} <span class="ph-sets">(${setsStr})</span></div>
+                            </div>
+                            <div class="ph-change ${change > 0 ? 'ph-plus' : 'ph-minus'}">${change > 0 ? '+' : ''}${change}</div>
+                            <div class="ph-date">${this.formatDate(m.date)}</div>
+                        </div>`;
+                    }).join('')}
+            </div>
+        `;
+        document.getElementById('playerStatsModal').style.display = 'flex';
     }
 
     _renderStars(rep) {
@@ -2357,7 +2485,7 @@ class UI {
             const linkedUser = userMap[p.id];
             return `<tr class="${rank <= 3 ? 'top-rank rank-' + rank : ''}">
                 <td class="col-rank"><span class="rank-number">${rank}</span></td>
-                <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text">${p.name}</div>${linkedUser ? `<div class="player-linked-user">(${linkedUser})</div>` : ''}</div></div></td>
+                <td class="col-name"><div class="player-info"><div class="player-avatar">${p.name.charAt(0)}</div><div><div class="player-name-text player-clickable" data-player-id="${p.id}">${p.name}</div>${linkedUser ? `<div class="player-linked-user">(${linkedUser})</div>` : ''}</div></div></td>
                 <td class="col-group"><span class="group-badge badge-${p.group.toLowerCase()}">${p.group}</span></td>
                 <td class="col-email">${this._maskEmail(p.email)}</td>
                 <td class="col-rating"><div class="rating-display"><span class="rating-value">${p.rating}</span><span class="rating-delta ${cls}">${delta > 0 ? '+' : ''}${delta}</span></div></td>
