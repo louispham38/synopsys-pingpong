@@ -3337,6 +3337,35 @@ body {
     padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
     cursor: pointer; border: none; transition: all 0.2s;
 }
+.challenge-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+.challenge-submitted-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+.btn-challenge-user-cancel {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    transition: all 0.2s;
+}
+.btn-challenge-user-cancel:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+.btn-challenge-user-cancel i { margin-right: 4px; }
 .btn-accept { background: var(--success); color: #fff; }
 .btn-accept:hover { filter: brightness(1.15); }
 .btn-decline { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }

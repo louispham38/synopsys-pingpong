@@ -705,6 +705,23 @@ class AppState {
         return true;
     }
 
+    /** User (non-admin) may remove a challenge from the list — see rules in UI */
+    userMayDeleteChallenge(ch, username, role) {
+        if (role === 'admin') return true;
+        if (!username) return false;
+        if (ch.status === 'pending') return ch.fromUser === username;
+        if (ch.status === 'accepted') {
+            return ch.fromUser === username || ch.toUser === username;
+        }
+        if (ch.status === 'score_submitted') {
+            if (ch.type === 'direct') {
+                return ch.submittedBy === username || ch.fromUser === username;
+            }
+            return ch.fromUser === username || ch.toUser === username;
+        }
+        return false;
+    }
+
     createDirectMatch(playerAId, playerBId, sets, submittedBy) {
         const playerA = this.getPlayer(playerAId);
         const playerB = this.getPlayer(playerBId);
@@ -1409,12 +1426,14 @@ class UI {
             html += '<h4><i class="fas fa-paper-plane"></i> Đã gửi thách đấu</h4>';
             outgoing.forEach(c => {
                 const toAccount = this.auth.getUser(c.toUser);
+                const canCancel = this.state.userMayDeleteChallenge(c, session.username, session.role);
                 html += `<div class="challenge-card challenge-outgoing">
                     <div class="challenge-info">
                         <strong>${toAccount ? toAccount.displayName : c.toUser}</strong>
                         <span class="challenge-time">${new Date(c.createdAt).toLocaleString('vi-VN')}</span>
                         <span class="badge badge-pending">Chờ phản hồi</span>
                     </div>
+                    ${canCancel ? `<div class="challenge-toolbar"><button type="button" class="btn-challenge-user-cancel" data-id="${c.id}"><i class="fas fa-times"></i> Hủy lời mời</button></div>` : ''}
                 </div>`;
             });
         }
@@ -1426,7 +1445,9 @@ class UI {
                 const fromPlayer = c.fromPlayerId ? this.state.getPlayer(c.fromPlayerId) : null;
                 const toPlayer = c.toPlayerId ? this.state.getPlayer(c.toPlayerId) : null;
                 const canSubmit = session.username === c.fromUser || session.username === c.toUser || session.role === 'admin';
+                const canCancelAccepted = this.state.userMayDeleteChallenge(c, session.username, session.role);
                 html += `<div class="challenge-card challenge-accepted">
+                    ${canCancelAccepted ? `<div class="challenge-toolbar"><button type="button" class="btn-challenge-user-cancel" data-id="${c.id}"><i class="fas fa-trash-alt"></i> Hủy thách đấu</button></div>` : ''}
                     <div class="challenge-info">
                         <strong>${fromAcc ? fromAcc.displayName : c.fromUser}</strong>
                         ${fromPlayer ? `<small>(${fromPlayer.rating})</small>` : ''} vs
@@ -1472,6 +1493,7 @@ class UI {
                 const setsStr = (c.sets || []).map(s => `${s.scoreA}-${s.scoreB}`).join(', ');
                 let setsA = 0, setsB = 0;
                 (c.sets || []).forEach(s => { if (s.scoreA > s.scoreB) setsA++; else if (s.scoreB > s.scoreA) setsB++; });
+                const canRemoveSubmitted = this.state.userMayDeleteChallenge(c, session.username, session.role);
                 html += `<div class="challenge-card challenge-submitted">
                     <div class="challenge-info">
                         <strong>${nameA}</strong>
@@ -1479,7 +1501,10 @@ class UI {
                         <strong>${nameB}</strong>
                     </div>
                     <div class="csf-detail">${isDirect ? '<span class="badge badge-direct"><i class="fas fa-pen"></i> Trực tiếp</span> ' : ''}Sets: ${setsStr}</div>
-                    <span class="badge badge-submitted"><i class="fas fa-hourglass-half"></i> Chờ duyệt</span>
+                    <div class="challenge-submitted-row">
+                        <span class="badge badge-submitted"><i class="fas fa-hourglass-half"></i> Chờ duyệt</span>
+                        ${canRemoveSubmitted ? `<button type="button" class="btn-challenge-user-cancel" data-id="${c.id}"><i class="fas fa-trash-alt"></i> Xóa</button>` : ''}
+                    </div>
                 </div>`;
             });
         }
@@ -1549,6 +1574,25 @@ class UI {
                     this.showToast('Đã gửi kết quả, chờ Admin duyệt!', 'success');
                     this.renderChallenges();
                 }
+            });
+        });
+        container.querySelectorAll('.btn-challenge-user-cancel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cId = parseInt(btn.dataset.id);
+                const ch = this.state.challenges.find(c => c.id === cId);
+                if (!ch || !this.state.userMayDeleteChallenge(ch, session.username, session.role)) {
+                    this.showToast('Không thể thao tác.', 'error');
+                    return;
+                }
+                let msg = 'Xóa mục này khỏi danh sách?';
+                if (ch.status === 'pending') msg = 'Hủy lời mời thách đấu đã gửi?';
+                else if (ch.status === 'accepted') msg = 'Hủy thách đấu này? (Sẽ không ghi nhận kết quả.)';
+                else if (ch.status === 'score_submitted') msg = 'Xóa kết quả chờ duyệt? (Chưa được Admin duyệt sẽ bị hủy.)';
+                if (!confirm(msg)) return;
+                this.state.deleteChallenge(cId);
+                this.renderChallenges();
+                this.renderAdminChallenges();
+                this.showToast('Đã cập nhật danh sách.', 'info');
             });
         });
     }
